@@ -680,10 +680,84 @@
     }
 
     /* ── Responsive ────────────────────────────────────── */
-    @media (max-width: 576px) {
+    @media (max-width: 768px) {
+      .top-bar .container {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+      }
+      .brand { gap: 8px; }
+      .brand img { height: 80px; }
+      .brand-text h1 { font-size: 1.2rem; }
+      .nav-right { justify-content: center; }
+
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-card { padding: 14px; gap: 10px; }
+      .stat-icon { width: 40px; height: 40px; font-size: 1.1rem; border-radius: 10px; }
+      .stat-info .value { font-size: 1.3rem; }
+      .stat-info .label { font-size: .65rem; }
+
+      .toolbar {
+        flex-direction: column;
+        padding: 12px;
+        gap: 10px;
+      }
+      .btn-add { width: 100%; justify-content: center; }
+      .search-wrap { min-width: unset; width: 100%; }
+      .filter-select { width: 100%; }
+
+      .orders-card .card-header { padding: 12px 14px; }
+
+      /* Card-style rows on mobile instead of table */
+      table thead { display: none; }
+      table tbody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 14px;
+        border-bottom: 1px solid var(--gray-200);
+        gap: 8px;
+      }
+      table tbody tr td {
+        padding: 2px 0;
+        border: none;
+        background: none !important;
+      }
+      table tbody tr td:nth-child(odd) {
+        background: none !important;
+      }
+      table tbody tr td::before {
+        content: attr(data-label);
+        font-size: .65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: var(--gray-500);
+        display: block;
+        margin-bottom: 2px;
+      }
+      .customer-avatar { width: 32px; height: 32px; font-size: .75rem; border-radius: 8px; }
+      .items-cell { max-width: 100%; }
+      .amount-cell { text-align: left !important; }
+
+      .pagination-wrap {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+      }
+
+      .item-row { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 400px) {
+      .container { padding-left: 10px; padding-right: 10px; }
       .brand img { height: 60px; }
       .brand-text h1 { font-size: 1rem; }
-      .item-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .stat-card { padding: 10px; gap: 8px; }
+      .stat-icon { width: 36px; height: 36px; font-size: 1rem; }
+      .stat-info .value { font-size: 1.1rem; }
+      .modal-dialog { margin: 10px; }
     }
   </style>
 </head>

@@ -179,18 +179,18 @@ function renderOrders(orders) {
     const orderDateDisplay = o.orderDate ? o.orderDate.replace(/[T ].*/,'') : '';
 
     return `<tr onclick="openDetailModal(${o.orderId})">
-      <td><strong style="color:var(--saffron)">#${o.orderId}</strong></td>
-      <td style="white-space:nowrap;font-size:.82rem"><i class="bi bi-calendar3" style="color:var(--saffron);margin-right:4px"></i>${orderDateDisplay}</td>
-      <td>
+      <td data-label="Order"><strong style="color:var(--saffron)">#${o.orderId}</strong></td>
+      <td data-label="Order Date" style="white-space:nowrap;font-size:.82rem"><i class="bi bi-calendar3" style="color:var(--saffron);margin-right:4px"></i>${orderDateDisplay}</td>
+      <td data-label="Customer">
         <div class="customer-cell">
           <div class="customer-avatar">${initials}</div>
           <span class="customer-name">${escapeHtml(o.customerName)}</span>
         </div>
       </td>
-      <td>${itemsList}</td>
-      <td>${statusBadge}</td>
-      <td>${payBadge}</td>
-      <td class="amount-cell" style="text-align:right">$${o.totalAmount.toFixed(2)}</td>
+      <td data-label="Items">${itemsList}</td>
+      <td data-label="Delivery Status">${statusBadge}</td>
+      <td data-label="Payment Status">${payBadge}</td>
+      <td data-label="Amount" class="amount-cell" style="text-align:right">$${o.totalAmount.toFixed(2)}</td>
     </tr>`;
   }).join('');
 

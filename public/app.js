@@ -61,38 +61,55 @@ function updateStats() {
     allOrders.filter(o => o.orderStatus === 'Pending').length;
   document.getElementById('statDelivered').textContent =
     allOrders.filter(o => o.orderStatus === 'Delivered').length;
+  document.getElementById('statUnpaid').textContent =
+    allOrders.filter(o => o.paymentStatus === 'No').length;
   const revenue = allOrders.reduce((s, o) => s + o.totalAmount, 0);
   document.getElementById('statRevenue').textContent = '$' + revenue.toFixed(2);
 }
 
-// ── Today's Orders ───────────────────────────────────────────────────────────
-let todayFilterActive = false;
+// ── Card Filters ─────────────────────────────────────────────────────────────
+let activeCardFilter = null;
 
 function getTodayOrders() {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   return allOrders.filter(o => {
     const d = o.orderDate || '';
-    // handle both YYYY-MM-DD and DD/MM/YYYY
     const normalized = d.includes('/') ? d.split('/').reverse().join('-') : d;
     return normalized === today;
   });
 }
 
-function toggleTodayFilter() {
-  todayFilterActive = !todayFilterActive;
-  const card = document.getElementById('todayCard');
-  card.classList.toggle('active', todayFilterActive);
-  // clear other filters
+function getFilteredByCard(filter) {
+  switch (filter) {
+    case 'all': return allOrders;
+    case 'today': return getTodayOrders();
+    case 'pending': return allOrders.filter(o => o.orderStatus === 'Pending');
+    case 'delivered': return allOrders.filter(o => o.orderStatus === 'Delivered');
+    case 'unpaid': return allOrders.filter(o => o.paymentStatus === 'No');
+    default: return allOrders;
+  }
+}
+
+function toggleCardFilter(filter) {
+  // toggle off if same card clicked again
+  if (activeCardFilter === filter) {
+    activeCardFilter = null;
+  } else {
+    activeCardFilter = filter;
+  }
+  // update active state on cards
+  document.querySelectorAll('.stat-card.clickable').forEach(c => c.classList.remove('active'));
+  if (activeCardFilter) {
+    const card = document.querySelector(`.stat-card[data-filter="${activeCardFilter}"]`);
+    if (card) card.classList.add('active');
+  }
+  // clear toolbar filters
   document.getElementById('searchInput').value = '';
   document.getElementById('filterStatus').value = '';
   document.getElementById('filterPayment').value = '';
   document.getElementById('filterMonth').value = '';
   currentPage = 1;
-  if (todayFilterActive) {
-    renderOrders(getTodayOrders());
-  } else {
-    renderOrders(allOrders);
-  }
+  renderOrders(activeCardFilter ? getFilteredByCard(activeCardFilter) : allOrders);
 }
 
 // ── Month Filter Dropdown ────────────────────────────────────────────────────
@@ -110,9 +127,9 @@ function populateMonthFilter() {
 
 // ── Filter & Render ──────────────────────────────────────────────────────────
 function filterOrders() {
-  // deactivate today shortcut when user changes filters
-  todayFilterActive = false;
-  document.getElementById('todayCard').classList.remove('active');
+  // deactivate card filter when user changes toolbar filters
+  activeCardFilter = null;
+  document.querySelectorAll('.stat-card.clickable').forEach(c => c.classList.remove('active'));
 
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   const status = document.getElementById('filterStatus').value;

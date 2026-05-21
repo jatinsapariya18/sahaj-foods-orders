@@ -104,7 +104,7 @@
     /* ── Stats Cards ────────────────────────────────── */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -139,10 +139,15 @@
     .stat-icon.today { background: #E3F2FD; color: #1976D2; }
     .stat-icon.pending { background: var(--gold-light); color: var(--gold); }
     .stat-icon.delivered { background: var(--green-light); color: var(--green); }
+    .stat-icon.unpaid { background: var(--red-light); color: var(--red); }
     .stat-icon.revenue { background: #EDE7F6; color: #7C4DFF; }
     .stat-card.clickable { cursor: pointer; position: relative; }
     .stat-card.clickable::after { content: '\F138'; font-family: 'bootstrap-icons'; position: absolute; top: 8px; right: 12px; font-size: .7rem; color: var(--gray-400); }
-    .stat-card.active { outline: 2.5px solid #1976D2; outline-offset: -2px; }
+    .stat-card.active { outline: 2.5px solid var(--saffron); outline-offset: -2px; }
+    .stat-card.active[data-filter="today"] { outline-color: #1976D2; }
+    .stat-card.active[data-filter="pending"] { outline-color: var(--gold); }
+    .stat-card.active[data-filter="delivered"] { outline-color: var(--green); }
+    .stat-card.active[data-filter="unpaid"] { outline-color: var(--red); }
     .stat-info { display: flex; flex-direction: column; }
     .stat-info .label { font-size: .75rem; color: var(--gray-500); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
     .stat-info .value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
@@ -796,32 +801,39 @@
 
   <!-- Stats Row -->
   <div class="stats-grid">
-    <div class="stat-card">
+    <div class="stat-card clickable" data-filter="all" onclick="toggleCardFilter('all')">
       <div class="stat-icon total"><i class="bi bi-box-seam-fill"></i></div>
       <div class="stat-info">
         <span class="label">Total Orders</span>
         <span class="value" id="statTotal">0</span>
       </div>
     </div>
-    <div class="stat-card clickable" id="todayCard" onclick="toggleTodayFilter()">
+    <div class="stat-card clickable" data-filter="today" onclick="toggleCardFilter('today')">
       <div class="stat-icon today"><i class="bi bi-calendar-event-fill"></i></div>
       <div class="stat-info">
         <span class="label">Today's Orders</span>
         <span class="value" style="color:#1976D2" id="statToday">0</span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" data-filter="pending" onclick="toggleCardFilter('pending')">
       <div class="stat-icon pending"><i class="bi bi-clock-fill"></i></div>
       <div class="stat-info">
-        <span class="label">Pending</span>
+        <span class="label">Pending Delivery</span>
         <span class="value" style="color:var(--gold)" id="statPending">0</span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" data-filter="delivered" onclick="toggleCardFilter('delivered')">
       <div class="stat-icon delivered"><i class="bi bi-check-circle-fill"></i></div>
       <div class="stat-info">
         <span class="label">Delivered</span>
         <span class="value" style="color:var(--green)" id="statDelivered">0</span>
+      </div>
+    </div>
+    <div class="stat-card clickable" data-filter="unpaid" onclick="toggleCardFilter('unpaid')">
+      <div class="stat-icon unpaid"><i class="bi bi-cash-stack"></i></div>
+      <div class="stat-info">
+        <span class="label">Pending Payment</span>
+        <span class="value" style="color:var(--red)" id="statUnpaid">0</span>
       </div>
     </div>
     <div class="stat-card">

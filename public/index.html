@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sahaj Foods - Order Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --saffron: #D42027;
+      --saffron-dark: #B01A20;
+      --saffron-light: #FDEAEA;
+      --green: #2D8B4E;
+      --green-light: #E0F2E8;
+      --red: #D94C4C;
+      --red-light: #FDEAEA;
+      --gold: #E8B730;
+      --gold-light: #FFF8EC;
+      --dark: #2C2C2C;
+      --gray-50: #FAFAFA;
+      --gray-100: #F5F5F5;
+      --gray-200: #EEEEEE;
+      --gray-300: #E0E0E0;
+      --gray-500: #9E9E9E;
+      --gray-700: #616161;
+      --radius: 14px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --shadow: 0 4px 16px rgba(0,0,0,.08);
+      --shadow-lg: 0 10px 40px rgba(0,0,0,.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--gray-100);
+      color: var(--dark);
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    /* ── Navbar ──────────────────────────────────────── */
+    .top-bar {
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+      padding: 6px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    .top-bar .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .brand img {
+      height: 225px;
+      width: auto;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+    .brand-text h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--saffron);
+      margin: 0;
+      line-height: 1.2;
+      letter-spacing: .5px;
+    }
+    .brand-text span {
+      font-size: .7rem;
+      color: var(--gray-500);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-date {
+      font-size: .8rem;
+      color: var(--gray-500);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── Stats Cards ────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .stat-icon.total { background: var(--saffron-light); color: var(--saffron); }
+    .stat-icon.pending { background: var(--gold-light); color: var(--gold); }
+    .stat-icon.delivered { background: var(--green-light); color: var(--green); }
+    .stat-icon.revenue { background: #EDE7F6; color: #7C4DFF; }
+    .stat-info { display: flex; flex-direction: column; }
+    .stat-info .label { font-size: .75rem; color: var(--gray-500); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+    .stat-info .value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+
+    /* ── Toolbar ─────────────────────────────────────── */
+    .toolbar {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-add {
+      background: var(--saffron);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: .9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all .2s;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+    }
+    .btn-add:hover { background: var(--saffron-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(232,119,42,.3); }
+    .search-wrap {
+      flex: 1;
+      min-width: 240px;
+      position: relative;
+    }
+    .search-wrap i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray-500);
+      font-size: .9rem;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      border: 2px solid var(--gray-200);
+      border-radius: 10px;
+      font-size: .9rem;
+      font-family: 'Poppins', sans-serif;
+      transition: border-color .2s;
+      outline: none;
+    }
+    .search-wrap input:focus { border-color: var(--saffron); }
+    .filter-select {
+      padding: 10px 14px;
+      border: 2px solid var(--gray-200);
+      border-radius: 10px;
+      font-size: .85rem;
+      font-family: 'Poppins', sans-serif;
+      color: var(--dark);
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .filter-select:focus { border-color: var(--saffron); }
+
+    /* ── Orders Table ────────────────────────────────── */
+    .orders-card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .orders-card .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+    }
+    .orders-card .card-header h5 {
+      margin: 0;
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .order-count {
+      background: var(--saffron-light);
+      color: var(--saffron);
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table th {
+      background: var(--gray-50);
+      padding: 12px 16px;
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--gray-500);
+      border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap;
+    }
+    table td {
+      padding: 14px 16px;
+      font-size: .88rem;
+      border-bottom: 1px solid var(--gray-100);
+      vertical-align: middle;
+    }
+    table tbody tr {
+      transition: background .15s;
+      cursor: pointer;
+    }
+    table tbody tr:hover {
+      background: var(--saffron-light);
+    }
+    table tbody tr td:nth-child(odd) {
+      background: rgba(0,0,0,.015);
+    }
+    table tbody tr:hover td:nth-child(odd) {
+      background: rgba(232,119,42,.08);
+    }
+    .customer-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .customer-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--saffron), var(--saffron-dark));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .85rem;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(232,119,42,.25);
+      letter-spacing: .5px;
+    }
+    .customer-name {
+      font-weight: 600;
+      font-size: .92rem;
+      color: var(--dark);
+      line-height: 1.3;
+    }
+
+    /* Badges */
+    .badge-status {
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: .75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .badge-status i { font-size: .6rem; }
+    .badge-delivered { background: var(--green-light); color: var(--green); }
+    .badge-pending { background: var(--gold-light); color: #C68A00; }
+    .badge-paid { background: var(--green-light); color: var(--green); }
+    .badge-unpaid { background: var(--red-light); color: var(--red); }
+
+    /* Item chips */
+    .items-cell {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 280px;
+    }
+    .item-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: .8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+      transition: all .15s;
+    }
+    .item-chip:hover {
+      border-color: var(--saffron);
+      background: var(--saffron-light);
+    }
+    .item-chip .item-icon {
+      color: var(--saffron);
+      font-size: .75rem;
+    }
+    .item-chip .item-label {
+      color: var(--dark);
+    }
+    .item-chip .qty {
+      background: var(--saffron);
+      color: #fff;
+      border-radius: 6px;
+      padding: 1px 7px;
+      font-size: .7rem;
+      font-weight: 700;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    /* Action Buttons */
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all .2s;
+      font-size: .85rem;
+    }
+    .action-btn.edit { background: var(--saffron-light); color: var(--saffron); }
+    .action-btn.edit:hover { background: var(--saffron); color: #fff; }
+    .action-btn.delete { background: var(--red-light); color: var(--red); }
+    .action-btn.delete:hover { background: var(--red); color: #fff; }
+
+    .amount-cell {
+      font-weight: 700;
+      color: var(--green);
+      font-size: .95rem;
+    }
+    .delivery-cell {
+      font-size: .8rem;
+      color: var(--gray-700);
+    }
+    .delivery-cell i { color: var(--saffron); margin-right: 3px; }
+
+    .no-orders {
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--gray-500);
+    }
+    .no-orders i { font-size: 3rem; margin-bottom: 12px; display: block; color: var(--gray-300); }
+
+    /* Pagination */
+    .pagination-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-top: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .page-info {
+      font-size: .8rem;
+      color: var(--gray-500);
+      font-weight: 500;
+    }
+    .page-btns {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .page-btn {
+      min-width: 34px;
+      height: 34px;
+      border: 1px solid var(--gray-200);
+      background: #fff;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      color: var(--dark);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .15s;
+    }
+    .page-btn:hover:not(:disabled):not(.active) {
+      border-color: var(--saffron);
+      color: var(--saffron);
+      background: var(--saffron-light);
+    }
+    .page-btn.active {
+      background: var(--saffron);
+      color: #fff;
+      border-color: var(--saffron);
+    }
+    .page-btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+    .page-dots {
+      font-size: .8rem;
+      color: var(--gray-500);
+      padding: 0 4px;
+    }
+
+    /* ── Modal ────────────────────────────────────────── */
+    .modal-content {
+      border: none;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-header-custom {
+      background: linear-gradient(135deg, var(--saffron) 0%, var(--saffron-dark) 100%);
+      color: #fff;
+      padding: 20px 24px;
+      border: none;
+    }
+    .modal-header-custom .modal-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-header-custom .btn-close {
+      filter: brightness(0) invert(1);
+      opacity: .8;
+    }
+    .modal-body { padding: 24px; }
+    .form-label {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 6px;
+    }
+    .form-control, .form-select {
+      border: 2px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: .9rem;
+      font-family: 'Poppins', sans-serif;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--saffron);
+      box-shadow: 0 0 0 3px rgba(232,119,42,.12);
+    }
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--gray-200);
+    }
+    .btn-save {
+      background: var(--saffron);
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: .9rem;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-save:hover { background: var(--saffron-dark); }
+    .btn-cancel {
+      background: var(--gray-100);
+      color: var(--gray-700);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 500;
+      font-size: .9rem;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-cancel:hover { background: var(--gray-200); }
+
+    /* Items Section in Modal */
+    .items-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 20px 0 12px;
+      padding-top: 16px;
+      border-top: 2px dashed var(--gray-200);
+    }
+    .items-header h6 {
+      margin: 0;
+      font-weight: 600;
+      color: var(--dark);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-add-item {
+      background: var(--green-light);
+      color: var(--green);
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-add-item:hover { background: var(--green); color: #fff; }
+
+    .item-row {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      display: grid;
+      grid-template-columns: 1fr 80px 90px 80px 36px;
+      gap: 10px;
+      align-items: end;
+      animation: slideIn .2s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .item-row label {
+      font-size: .7rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .item-row input {
+      padding: 8px 10px;
+      border: 2px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: .85rem;
+      font-family: 'Poppins', sans-serif;
+      outline: none;
+      width: 100%;
+      transition: border-color .2s;
+    }
+    .item-row input:focus { border-color: var(--saffron); }
+    .item-row select {
+      padding: 8px 10px;
+      border: 2px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: .85rem;
+      font-family: 'Poppins', sans-serif;
+      outline: none;
+      width: 100%;
+      transition: border-color .2s;
+      background: #fff;
+      cursor: pointer;
+    }
+    .item-row select:focus { border-color: var(--saffron); }
+    .item-subtotal {
+      font-weight: 700;
+      color: var(--green);
+      font-size: .9rem;
+      padding-top: 8px;
+    }
+    .btn-remove-item {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: var(--red-light);
+      color: var(--red);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .2s;
+      align-self: end;
+      margin-bottom: 2px;
+    }
+    .btn-remove-item:hover { background: var(--red); color: #fff; }
+
+    .order-total-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 16px;
+      background: var(--saffron-light);
+      border-radius: 10px;
+      margin-top: 12px;
+    }
+    .order-total-bar .label { font-size: .85rem; font-weight: 500; color: var(--gray-700); }
+    .order-total-bar .total { font-size: 1.3rem; font-weight: 700; color: var(--saffron-dark); }
+
+    /* ── Delete Modal ─────────────────────────────────── */
+    .delete-modal .modal-header {
+      background: linear-gradient(135deg, var(--red), #B83131);
+      color: #fff;
+      padding: 16px 20px;
+      border: none;
+    }
+    .btn-delete-confirm {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+    }
+    .btn-delete-confirm:hover { background: #B83131; }
+
+    /* ── Toast ─────────────────────────────────────────── */
+    .toast-container { z-index: 9999; }
+    .custom-toast {
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      border: none;
+    }
+
+    /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 576px) {
+      .brand img { height: 60px; }
+      .brand-text h1 { font-size: 1rem; }
+      .item-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="container">
+    <a class="brand" href="/">
+      <img src="logo.png" alt="Sahaj Foods">
+      <div class="brand-text">
+        <h1>SAHAJ FOODS</h1>
+        <span>Order Management System</span>
+      </div>
+    </a>
+    <div class="nav-right">
+      <div class="nav-date">
+        <i class="bi bi-calendar3"></i>
+        <span id="currentDate"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+  <div id="toast" class="toast custom-toast align-items-center text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMsg"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+
+  <!-- Stats Row -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon total"><i class="bi bi-box-seam-fill"></i></div>
+      <div class="stat-info">
+        <span class="label">Total Orders</span>
+        <span class="value" id="statTotal">0</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon pending"><i class="bi bi-clock-fill"></i></div>
+      <div class="stat-info">
+        <span class="label">Pending</span>
+        <span class="value" style="color:var(--gold)" id="statPending">0</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon delivered"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="stat-info">
+        <span class="label">Delivered</span>
+        <span class="value" style="color:var(--green)" id="statDelivered">0</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon revenue"><i class="bi bi-currency-dollar"></i></div>
+      <div class="stat-info">
+        <span class="label">Total Revenue</span>
+        <span class="value" style="color:#7C4DFF" id="statRevenue">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn-add" onclick="openNewOrderModal()">
+      <i class="bi bi-plus-circle-fill"></i> New Order
+    </button>
+    <div class="search-wrap">
+      <i class="bi bi-search"></i>
+      <input type="text" id="searchInput" placeholder="Search orders by customer, item, ID..." oninput="filterOrders()">
+    </div>
+    <select class="filter-select" id="filterStatus" onchange="filterOrders()">
+      <option value="">All Status</option>
+      <option value="Pending">Pending</option>
+      <option value="Delivered">Delivered</option>
+    </select>
+    <select class="filter-select" id="filterPayment" onchange="filterOrders()">
+      <option value="">All Payments</option>
+      <option value="Yes">Paid</option>
+      <option value="No">Unpaid</option>
+    </select>
+    <select class="filter-select" id="filterMonth" onchange="filterOrders()">
+      <option value="">All Months</option>
+    </select>
+  </div>
+
+  <!-- Orders Table -->
+  <div class="orders-card">
+    <div class="card-header">
+      <h5><i class="bi bi-receipt-cutoff"></i> Orders <span class="order-count" id="orderCount">0</span></h5>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th style="width:70px"><i class="bi bi-calendar3"></i> Order Date</th>
+            <th style="min-width:260px">Customer</th>
+            <th>Items</th>
+            <th>Delivery Status</th>
+            <th>Payment Status</th>
+            <th style="text-align:right">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+    <div class="no-orders" id="noOrders" style="display:none">
+      <i class="bi bi-inbox"></i>
+      <div style="font-size:1.1rem;font-weight:500">No orders found</div>
+      <div style="font-size:.85rem">Try adjusting your search or filters</div>
+    </div>
+    <div class="pagination-wrap" id="paginationWrap"></div>
+  </div>
+</div>
+
+<!-- Order Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title" id="modalTitle"><i class="bi bi-plus-circle"></i> New Order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="orderForm">
+          <input type="hidden" id="editOrderId">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Month</label>
+              <select class="form-select" id="fMonth" required>
+                <option value="January">January</option>
+                <option value="February">February</option>
+                <option value="March">March</option>
+                <option value="April">April</option>
+                <option value="May">May</option>
+                <option value="June">June</option>
+                <option value="July">July</option>
+                <option value="August">August</option>
+                <option value="September">September</option>
+                <option value="October">October</option>
+                <option value="November">November</option>
+                <option value="December">December</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Order Date</label>
+              <input type="date" class="form-control" id="fOrderDate" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Customer Name</label>
+              <input type="text" class="form-control" id="fCustomer" placeholder="Enter customer name" required>
+            </div>
+          </div>
+          <div class="row g-3 mt-1">
+            <div class="col-md-3">
+              <label class="form-label">Order Status</label>
+              <select class="form-select" id="fStatus">
+                <option value="Pending">Pending</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Payment</label>
+              <select class="form-select" id="fPayment">
+                <option value="No">Unpaid</option>
+                <option value="Yes">Paid</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Delivery Date</label>
+              <input type="date" class="form-control" id="fDeliveryDate">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Delivery Location</label>
+              <input type="text" class="form-control" id="fDeliveryLoc" placeholder="e.g. Hamilton">
+            </div>
+          </div>
+
+          <!-- Items Section -->
+          <div class="items-header">
+            <h6><i class="bi bi-basket-fill" style="color:var(--saffron)"></i> Order Items</h6>
+            <button type="button" class="btn-add-item" onclick="addItemRow()">
+              <i class="bi bi-plus"></i> Add Item
+            </button>
+          </div>
+          <div id="itemsContainer"></div>
+          <div class="order-total-bar">
+            <span class="label">Order Total:</span>
+            <span class="total">$<span id="orderTotal">0.00</span></span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn-save" onclick="saveOrder()">
+          <i class="bi bi-check2-circle"></i> Save Order
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:var(--radius);overflow:hidden">
+      <div class="modal-header" style="background:var(--saffron);color:#fff;border:none;padding:16px 24px">
+        <h5 class="modal-title" id="detailTitle" style="font-weight:600"></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="detailBody" style="padding:24px"></div>
+      <div class="modal-footer" style="border-top:1px solid var(--gray-200);padding:12px 24px;gap:8px">
+        <button type="button" class="btn-cancel" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="action-btn edit" id="detailEditBtn" style="width:auto;height:auto;padding:8px 18px;font-size:.85rem;border-radius:10px;gap:6px;font-weight:600;font-family:'Poppins',sans-serif">
+          <i class="bi bi-pencil-fill"></i> Edit
+        </button>
+        <button type="button" class="action-btn delete" id="detailDeleteBtn" style="width:auto;height:auto;padding:8px 18px;font-size:.85rem;border-radius:10px;gap:6px;font-weight:600;font-family:'Poppins',sans-serif">
+          <i class="bi bi-trash3-fill"></i> Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content delete-modal">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Delete Order</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:24px">
+        <p style="margin:0;font-size:.95rem">Are you sure you want to delete <strong>Order #<span id="deleteOrderId"></span></strong>? This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn-delete-confirm" onclick="confirmDelete()">
+          <i class="bi bi-trash3"></i> Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

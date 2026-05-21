@@ -33,14 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── API Calls ────────────────────────────────────────────────────────────────
 async function loadOrders() {
+  setLoadStatus('Loading orders…', 'loading');
   try {
     const res = await fetch('/api/orders');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     allOrders = await res.json();
     updateStats();
     populateMonthFilter();
     filterOrders();
+    setLoadStatus(`Loaded ${allOrders.length} orders`, 'success');
   } catch (err) {
     console.error('Failed to load orders:', err);
+    setLoadStatus('Failed to load orders. Click retry.', 'error');
   }
 }
 
@@ -51,6 +55,17 @@ async function loadItems() {
   } catch (err) {
     console.error('Failed to load items:', err);
   }
+}
+
+function setLoadStatus(message, type = 'neutral') {
+  const statusEl = document.getElementById('loadStatus');
+  const statusText = document.getElementById('loadStatusText');
+  const retryBtn = document.getElementById('refreshBtn');
+  if (!statusEl || !statusText) return;
+  statusText.textContent = message;
+  statusEl.classList.remove('neutral', 'loading', 'success', 'error');
+  statusEl.classList.add(type);
+  if (retryBtn) retryBtn.style.display = type === 'error' ? 'inline-flex' : 'none';
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────

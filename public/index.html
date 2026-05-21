@@ -104,7 +104,7 @@
     /* ── Stats Cards ────────────────────────────────── */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -136,9 +136,13 @@
       flex-shrink: 0;
     }
     .stat-icon.total { background: var(--saffron-light); color: var(--saffron); }
+    .stat-icon.today { background: #E3F2FD; color: #1976D2; }
     .stat-icon.pending { background: var(--gold-light); color: var(--gold); }
     .stat-icon.delivered { background: var(--green-light); color: var(--green); }
     .stat-icon.revenue { background: #EDE7F6; color: #7C4DFF; }
+    .stat-card.clickable { cursor: pointer; position: relative; }
+    .stat-card.clickable::after { content: '\F138'; font-family: 'bootstrap-icons'; position: absolute; top: 8px; right: 12px; font-size: .7rem; color: var(--gray-400); }
+    .stat-card.active { outline: 2.5px solid #1976D2; outline-offset: -2px; }
     .stat-info { display: flex; flex-direction: column; }
     .stat-info .label { font-size: .75rem; color: var(--gray-500); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
     .stat-info .value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
@@ -723,6 +727,13 @@
       <div class="stat-info">
         <span class="label">Total Orders</span>
         <span class="value" id="statTotal">0</span>
+      </div>
+    </div>
+    <div class="stat-card clickable" id="todayCard" onclick="toggleTodayFilter()">
+      <div class="stat-icon today"><i class="bi bi-calendar-event-fill"></i></div>
+      <div class="stat-info">
+        <span class="label">Today's Orders</span>
+        <span class="value" style="color:#1976D2" id="statToday">0</span>
       </div>
     </div>
     <div class="stat-card">

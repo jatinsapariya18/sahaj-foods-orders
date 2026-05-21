@@ -56,12 +56,43 @@ async function loadItems() {
 // ── Stats ────────────────────────────────────────────────────────────────────
 function updateStats() {
   document.getElementById('statTotal').textContent = allOrders.length;
+  document.getElementById('statToday').textContent = getTodayOrders().length;
   document.getElementById('statPending').textContent =
     allOrders.filter(o => o.orderStatus === 'Pending').length;
   document.getElementById('statDelivered').textContent =
     allOrders.filter(o => o.orderStatus === 'Delivered').length;
   const revenue = allOrders.reduce((s, o) => s + o.totalAmount, 0);
   document.getElementById('statRevenue').textContent = '$' + revenue.toFixed(2);
+}
+
+// ── Today's Orders ───────────────────────────────────────────────────────────
+let todayFilterActive = false;
+
+function getTodayOrders() {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  return allOrders.filter(o => {
+    const d = o.orderDate || '';
+    // handle both YYYY-MM-DD and DD/MM/YYYY
+    const normalized = d.includes('/') ? d.split('/').reverse().join('-') : d;
+    return normalized === today;
+  });
+}
+
+function toggleTodayFilter() {
+  todayFilterActive = !todayFilterActive;
+  const card = document.getElementById('todayCard');
+  card.classList.toggle('active', todayFilterActive);
+  // clear other filters
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('filterPayment').value = '';
+  document.getElementById('filterMonth').value = '';
+  currentPage = 1;
+  if (todayFilterActive) {
+    renderOrders(getTodayOrders());
+  } else {
+    renderOrders(allOrders);
+  }
 }
 
 // ── Month Filter Dropdown ────────────────────────────────────────────────────
@@ -79,6 +110,10 @@ function populateMonthFilter() {
 
 // ── Filter & Render ──────────────────────────────────────────────────────────
 function filterOrders() {
+  // deactivate today shortcut when user changes filters
+  todayFilterActive = false;
+  document.getElementById('todayCard').classList.remove('active');
+
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   const status = document.getElementById('filterStatus').value;
   const payment = document.getElementById('filterPayment').value;

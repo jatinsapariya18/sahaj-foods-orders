@@ -236,8 +236,44 @@
     }
     .filter-select:focus { border-color: var(--saffron); }
 
-    .filter-date-group { display:flex; flex-direction:column; gap:6px; }
+    .filter-date-group { display:flex; flex-direction:column; gap:4px; }
     .filter-label { font-size:.82rem; color:var(--gray-500); font-weight:600; margin:0; line-height:1; height:40px; display:flex; align-items:center; }
+
+    /* Date filter section */
+    .date-filter-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 10px 14px;
+      width: 100%;
+    }
+    .date-filter-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      font-size: .88rem;
+      color: var(--dark);
+      height: 40px;
+      white-space: nowrap;
+    }
+    .date-filter-inputs {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+    .date-filter-inputs .filter-date-group { flex: 1; min-width: 0; }
+    .date-filter-inputs .filter-select { width: 100%; }
+    .date-filter-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
     .load-status {
       background: #fff7e6;
@@ -811,22 +847,41 @@
       .search-wrap { min-width: unset; width: 100%; }
       .filter-select { width: 100%; }
 
-      /* Date filter row: stack vertically on mobile */
+      /* Date filter section on mobile */
       .date-filter-row {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        width: 100% !important;
-        gap: 8px !important;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px 12px;
       }
-      .filter-date-group { width: 100%; }
-      .filter-date-group input { width: 100%; }
+      .date-filter-header {
+        height: auto;
+        font-size: .85rem;
+      }
+      .date-filter-inputs {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+      }
+      .date-filter-inputs .filter-date-group { flex: 1; }
+      .date-filter-inputs .filter-select {
+        height: 36px;
+        padding: 6px 8px;
+        font-size: .8rem;
+      }
+      .date-filter-inputs .filter-label {
+        height: auto;
+        font-size: .7rem;
+      }
       .date-filter-actions {
-        width: 100% !important;
-        display: flex !important;
+        display: flex;
+        gap: 8px;
       }
       .date-filter-actions .btn-add {
         flex: 1;
-        margin-left: 0 !important;
+        height: 36px;
+        font-size: .82rem;
+        padding: 6px 12px;
       }
 
       /* Delivery alert banner: stack on mobile */
@@ -1001,19 +1056,22 @@
       <option value="Yes">Paid</option>
       <option value="No">Unpaid</option>
     </select>
-    <div class="date-filter-row" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;margin-right:8px;height:40px">
-        <label class="filter-label">order date</label>
+    <div class="date-filter-row">
+      <div class="date-filter-header">
+        <i class="bi bi-calendar-range" style="color:var(--saffron);font-size:1rem"></i>
+        <span>Order Date</span>
       </div>
-      <div class="filter-date-group">
-        <label class="filter-label" for="filterDateFrom">From</label>
-        <input type="date" id="filterDateFrom" class="filter-select" placeholder="From" title="From date">
+      <div class="date-filter-inputs">
+        <div class="filter-date-group">
+          <label class="filter-label" for="filterDateFrom">From</label>
+          <input type="date" id="filterDateFrom" class="filter-select" title="From date">
+        </div>
+        <div class="filter-date-group">
+          <label class="filter-label" for="filterDateTo">To</label>
+          <input type="date" id="filterDateTo" class="filter-select" title="To date">
+        </div>
       </div>
-      <div class="filter-date-group">
-        <label class="filter-label" for="filterDateTo">To</label>
-        <input type="date" id="filterDateTo" class="filter-select" placeholder="To" title="To date">
-      </div>
-      <div class="date-filter-actions" style="display:flex;align-items:center;gap:8px">
+      <div class="date-filter-actions">
         <button class="btn-add" id="filterDateSearchBtn" onclick="filterOrders()">
           <i class="bi bi-search"></i> Search
         </button>

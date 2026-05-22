@@ -68,6 +68,21 @@ function setLoadStatus(message, type = 'neutral') {
   if (retryBtn) retryBtn.style.display = type === 'error' ? 'inline-flex' : 'none';
 }
 
+// Full-screen action loader overlay (used for save/update/delete)
+function showActionLoader(message = 'Working…') {
+  const overlay = document.getElementById('actionOverlay');
+  const txt = document.getElementById('actionOverlayText');
+  if (!overlay) return;
+  if (txt) txt.textContent = message;
+  overlay.style.display = 'flex';
+}
+
+function hideActionLoader() {
+  const overlay = document.getElementById('actionOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'none';
+}
+
 // ── Stats ────────────────────────────────────────────────────────────────────
 function updateStats() {
   document.getElementById('statTotal').textContent = allOrders.length;
@@ -492,8 +507,16 @@ async function saveOrder() {
   };
 
   const editId = document.getElementById('editOrderId').value;
-
+  const saveBtn = document.querySelector('.btn-save');
+  const originalSaveHtml = saveBtn ? saveBtn.innerHTML : null;
   try {
+    // show full-screen loader and disable save button
+    showActionLoader(editId ? 'Saving changes…' : 'Saving order…');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+    }
+
     let res;
     if (editId) {
       res = await fetch(`/api/orders/${editId}`, {
@@ -520,6 +543,12 @@ async function saveOrder() {
     await loadItems();
   } catch (err) {
     showToast(err.message || 'Error saving order. Please try again.', 'danger');
+  } finally {
+    hideActionLoader();
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      if (originalSaveHtml) saveBtn.innerHTML = originalSaveHtml;
+    }
   }
 }
 
@@ -532,7 +561,15 @@ function openDeleteModal(orderId) {
 
 async function confirmDelete() {
   if (!deleteTargetId) return;
+  const delBtn = document.querySelector('.btn-delete-confirm');
+  const originalDelHtml = delBtn ? delBtn.innerHTML : null;
   try {
+    showActionLoader('Deleting order…');
+    if (delBtn) {
+      delBtn.disabled = true;
+      delBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Deleting...';
+    }
+
     const res = await fetch(`/api/orders/${deleteTargetId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed');
     bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
@@ -541,6 +578,12 @@ async function confirmDelete() {
     await loadOrders();
   } catch (err) {
     showToast('Error deleting order.', 'danger');
+  } finally {
+    hideActionLoader();
+    if (delBtn) {
+      delBtn.disabled = false;
+      if (originalDelHtml) delBtn.innerHTML = originalDelHtml;
+    }
   }
 }
 

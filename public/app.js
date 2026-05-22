@@ -295,7 +295,7 @@ function openDetailModal(orderId) {
   const o = allOrders.find(x => x.orderId === orderId);
   if (!o) return;
 
-  document.getElementById('detailTitle').innerHTML = `<i class="bi bi-receipt"></i> Order #${o.orderId}`;
+  document.getElementById('detailTitle').innerHTML = `<i class="bi bi-receipt"></i> Order Details`;
 
   const statusBadge = o.orderStatus === 'Delivered'
     ? '<span class="badge-status badge-delivered"><i class="bi bi-circle-fill"></i> Delivered</span>'

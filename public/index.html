@@ -805,10 +805,41 @@
         flex-direction: column;
         padding: 12px;
         gap: 10px;
+        align-items: stretch;
       }
       .btn-add { width: 100%; justify-content: center; }
       .search-wrap { min-width: unset; width: 100%; }
       .filter-select { width: 100%; }
+
+      /* Date filter row: stack vertically on mobile */
+      .date-filter-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        gap: 8px !important;
+      }
+      .filter-date-group { width: 100%; }
+      .filter-date-group input { width: 100%; }
+      .date-filter-actions {
+        width: 100% !important;
+        display: flex !important;
+      }
+      .date-filter-actions .btn-add {
+        flex: 1;
+        margin-left: 0 !important;
+      }
+
+      /* Delivery alert banner: stack on mobile */
+      #deliveryAlertWrap .alert {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+      }
+      #deliveryAlertWrap .alert .btn-add,
+      #deliveryAlertWrap .alert .btn-cancel {
+        width: 100%;
+        justify-content: center;
+      }
 
       .orders-card .card-header { padding: 12px 14px; }
 
@@ -970,7 +1001,7 @@
       <option value="Yes">Paid</option>
       <option value="No">Unpaid</option>
     </select>
-    <div style="display:flex;gap:12px;align-items:flex-end">
+    <div class="date-filter-row" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
       <div style="display:flex;align-items:center;margin-right:8px;height:40px">
         <label class="filter-label">order date</label>
       </div>
@@ -982,11 +1013,11 @@
         <label class="filter-label" for="filterDateTo">To</label>
         <input type="date" id="filterDateTo" class="filter-select" placeholder="To" title="To date">
       </div>
-      <div style="display:flex;align-items:center">
+      <div class="date-filter-actions" style="display:flex;align-items:center;gap:8px">
         <button class="btn-add" id="filterDateSearchBtn" onclick="filterOrders()">
           <i class="bi bi-search"></i> Search
         </button>
-        <button class="btn-add" id="filterDateResetBtn" onclick="clearDateFilters()" style="margin-left:8px" disabled>
+        <button class="btn-add" id="filterDateResetBtn" onclick="clearDateFilters()" disabled>
           <i class="bi bi-x-circle"></i> Reset
         </button>
       </div>

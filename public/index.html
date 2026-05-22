@@ -904,6 +904,9 @@
         height: auto;
         font-size: .7rem;
       }
+      .date-filter-inputs .filter-label .label-cal-icon {
+        display: none;
+      }
       .date-input-wrap .bi-calendar-event-fill {
         left: 8px;
         font-size: .75rem;
@@ -1094,18 +1097,18 @@
     <div class="date-filter-row">
       <div class="date-filter-header">
         <i class="bi bi-calendar-range" style="color:var(--saffron);font-size:1rem"></i>
-        <span>Order Date</span>
+        <span>Search Orders</span>
       </div>
       <div class="date-filter-inputs">
         <div class="filter-date-group">
-          <label class="filter-label" for="filterDateFrom"><i class="bi bi-calendar-event-fill" style="margin-right:4px;color:var(--saffron)"></i> From</label>
+          <label class="filter-label" for="filterDateFrom"><i class="bi bi-calendar-event-fill label-cal-icon" style="margin-right:4px;color:var(--saffron)"></i> From</label>
           <div class="date-input-wrap">
             <i class="bi bi-calendar-event-fill"></i>
             <input type="date" id="filterDateFrom" class="filter-select" title="Select start date">
           </div>
         </div>
         <div class="filter-date-group">
-          <label class="filter-label" for="filterDateTo"><i class="bi bi-calendar-event-fill" style="margin-right:4px;color:var(--saffron)"></i> To</label>
+          <label class="filter-label" for="filterDateTo"><i class="bi bi-calendar-event-fill label-cal-icon" style="margin-right:4px;color:var(--saffron)"></i> To</label>
           <div class="date-input-wrap">
             <i class="bi bi-calendar-event-fill"></i>
             <input type="date" id="filterDateTo" class="filter-select" title="Select end date">

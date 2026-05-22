@@ -1,3 +1,4 @@
 {
-  "appsScriptUrl": "https://script.google.com/macros/s/AKfycbzdPaG_gqHUEZGa8wVZ-HZxuXoLdvKexu5wdKAQkoMPrW0cgEAX4GfBObodnnm6soNvPw/exec"
+  "appsScriptUrl": "https://script.google.com/macros/s/AKfycbzdPaG_gqHUEZGa8wVZ-HZxuXoLdvKexu5wdKAQkoMPrW0cgEAX4GfBObodnnm6soNvPw/exec",
+  "allowInsecureAppsScript": true
 }

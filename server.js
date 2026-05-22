@@ -2,6 +2,8 @@ const express = require('express');
 const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const { URL } = require('url');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,9 +13,11 @@ const CONFIG_PATH = path.join(__dirname, 'config.json');
 const EXCEL_PATH = path.join(__dirname, 'data', 'Sahaj Foods Orders Sheet.xlsx');
 
 let APPS_SCRIPT_URL = '';
+let allowInsecureAppsScript = false;
 try {
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
   APPS_SCRIPT_URL = config.appsScriptUrl || '';
+  allowInsecureAppsScript = !!config.allowInsecureAppsScript;
 } catch (e) { /* no config file */ }
 
 const useGoogleSheets = !!APPS_SCRIPT_URL;
@@ -29,24 +33,78 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function callAppsScript(method = 'GET', payload = null) {
-  if (method === 'GET') {
-    const response = await fetch(APPS_SCRIPT_URL, { redirect: 'follow' });
-    return response.json();
-  }
-  // POST to Apps Script - redirect:follow works for POST
-  const response = await fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload),
-    redirect: 'follow'
-  });
+  const doFetch = async () => {
+    if (method === 'GET') {
+      const response = await fetch(APPS_SCRIPT_URL, { redirect: 'follow' });
+      return response.json();
+    }
+    // POST to Apps Script - redirect:follow works for POST
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
 
-  const text = await response.text();
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error('Apps Script response:', text.substring(0, 500));
+      throw new Error('Invalid response from Apps Script');
+    }
+  };
+
   try {
-    return JSON.parse(text);
-  } catch (e) {
-    console.error('Apps Script response:', text.substring(0, 500));
-    throw new Error('Invalid response from Apps Script');
+    return await doFetch();
+  } catch (err) {
+    // If TLS/self-signed cert error and user allowed insecure fallback, retry with relaxed TLS
+    const causeCode = err && err.cause && err.cause.code;
+    if (allowInsecureAppsScript && (causeCode === 'SELF_SIGNED_CERT_IN_CHAIN' || causeCode === 'DEPTH_ZERO_SELF_SIGNED_CERT')) {
+      return new Promise((resolve, reject) => {
+        const maxRedirects = 5;
+        const doRequest = (currentUrl, redirectCount) => {
+          if (redirectCount > maxRedirects) return reject(new Error('Too many redirects'));
+          try {
+            const u = new URL(currentUrl);
+            const isPost = method !== 'GET' && redirectCount === 0; // only send body on first request
+            const data = isPost ? JSON.stringify(payload) : null;
+            const options = {
+              hostname: u.hostname,
+              port: u.port || (u.protocol === 'https:' ? 443 : 80),
+              path: u.pathname + u.search,
+              method: isPost ? 'POST' : 'GET',
+              headers: isPost ? { 'Content-Type': 'text/plain;charset=utf-8', 'Content-Length': Buffer.byteLength(data) } : {},
+              agent: new https.Agent({ rejectUnauthorized: false })
+            };
+
+            const req = https.request(options, res => {
+              // Follow redirects (3xx)
+              if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                // follow Location header
+                const loc = res.headers.location;
+                // If location is relative, resolve against currentUrl
+                const nextUrl = loc.startsWith('http') ? loc : new URL(loc, currentUrl).toString();
+                return doRequest(nextUrl, redirectCount + 1);
+              }
+
+              let body = '';
+              res.setEncoding('utf8');
+              res.on('data', chunk => body += chunk);
+              res.on('end', () => {
+                try { resolve(JSON.parse(body)); } catch (e) { console.error('Apps Script response:', body.substring(0, 500)); reject(new Error('Invalid response from Apps Script')); }
+              });
+            });
+
+            req.on('error', e => reject(e));
+            if (isPost && data) req.write(data);
+            req.end();
+          } catch (e) { reject(e); }
+        };
+        doRequest(APPS_SCRIPT_URL, 0);
+      });
+    }
+    throw err;
   }
 }
 
@@ -81,14 +139,20 @@ function parseRowsToOrders(rows) {
     const cleanItem = itemName ? String(itemName).replace(/\n/g, '').trim() : '';
     if (!cleanItem) continue;
 
-    const fmtDate = (d) => {
+    const toISODate = (d) => {
       if (!d) return '';
-      if (d instanceof Date) {
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        return `${dd}/${mm}/${d.getFullYear()}`;
-      }
-      return String(d).replace(/[T ].*/,'');
+      if (d instanceof Date) return d.toISOString().slice(0, 10);
+      const s = String(d).trim();
+      // already ISO-like
+      const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+      // dd/mm/yyyy -> convert
+      const dm = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (dm) return `${dm[3]}-${dm[2]}-${dm[1]}`;
+      // try to parse generic date string
+      const ts = Date.parse(s);
+      if (!isNaN(ts)) return new Date(ts).toISOString().slice(0, 10);
+      return s;
     };
 
     const qty = Number(quantity) || 0;
@@ -101,11 +165,11 @@ function parseRowsToOrders(rows) {
       currentOrder = {
         orderId: Number(orderId),
         month: currentMonth,
-        orderDate: fmtDate(orderDate),
+        orderDate: toISODate(orderDate),
         customerName: customerName ? String(customerName).trim() : '',
         orderStatus: orderStatus ? String(orderStatus).trim() : '',
         paymentStatus: paymentStatus ? String(paymentStatus).trim() : '',
-        deliveryDate: fmtDate(deliveryDate),
+        deliveryDate: toISODate(deliveryDate),
         deliveryLocation: deliveryLocation ? String(deliveryLocation).trim() : '',
         referredBy: referredBy ? String(referredBy).trim() : '',
         items: [],
@@ -133,6 +197,19 @@ function ordersToRows(orders) {
     monthGroups[m].push(o);
   });
 
+  const formatDateOut = (d) => {
+    if (!d) return '';
+    if (d instanceof Date) return d.toISOString().slice(0,10);
+    const s = String(d).trim();
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    const dm = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (dm) return `${dm[3]}-${dm[2]}-${dm[1]}`;
+    const ts = Date.parse(s);
+    if (!isNaN(ts)) return new Date(ts).toISOString().slice(0,10);
+    return s;
+  };
+
   for (const [month, monthOrders] of Object.entries(monthGroups)) {
     rows.push([month, '', '', '', '', '', '', '', '', '', '', '', '', '']);
     monthOrders.forEach(order => {
@@ -140,7 +217,7 @@ function ordersToRows(orders) {
         const itemTotal = Math.round(item.quantity * item.unitPrice * 100) / 100;
         if (idx === 0) {
           rows.push([
-            '', order.orderId, order.orderDate, order.customerName,
+            '', order.orderId, formatDateOut(order.orderDate), order.customerName,
             item.itemName, item.quantity, item.unitPrice,
             order.orderStatus, order.paymentStatus,
             itemTotal, order.totalAmount, order.deliveryDate, order.deliveryLocation,
@@ -205,14 +282,17 @@ async function readOrdersFromExcel() {
     const cleanItem = itemName ? String(itemName).replace(/\n/g, '').trim() : '';
     if (!cleanItem) return;
 
-    const fmtDate = (d) => {
+    const toISODate = (d) => {
       if (!d) return '';
-      if (d instanceof Date) {
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        return `${dd}/${mm}/${d.getFullYear()}`;
-      }
-      return String(d).replace(/[T ].*/,'');
+      if (d instanceof Date) return d.toISOString().slice(0, 10);
+      const s = String(d).trim();
+      const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+      const dm = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (dm) return `${dm[3]}-${dm[2]}-${dm[1]}`;
+      const ts = Date.parse(s);
+      if (!isNaN(ts)) return new Date(ts).toISOString().slice(0, 10);
+      return s;
     };
 
     const qty = Number(quantity) || 0;
@@ -224,11 +304,11 @@ async function readOrdersFromExcel() {
     } else if (orderId) {
       currentOrder = {
         orderId: Number(orderId), month: currentMonth,
-        orderDate: fmtDate(orderDate),
+        orderDate: toISODate(orderDate),
         customerName: customerName ? String(customerName).trim() : '',
         orderStatus: orderStatus ? String(orderStatus).trim() : '',
         paymentStatus: paymentStatus ? String(paymentStatus).trim() : '',
-        deliveryDate: fmtDate(deliveryDate),
+        deliveryDate: toISODate(deliveryDate),
         deliveryLocation: deliveryLocation ? String(deliveryLocation).trim() : '',
         referredBy: referredBy ? String(referredBy).trim() : '',
         items: [], totalAmount: 0
@@ -283,10 +363,22 @@ async function writeOrdersToExcel(orders) {
       order.items.forEach((item, idx) => {
         const itemTotal = Math.round(item.quantity * item.unitPrice * 100) / 100;
         if (idx === 0) {
-          ws.addRow([null, order.orderId, order.orderDate, order.customerName,
+          const fmt = (d) => {
+            if (!d) return '';
+            if (d instanceof Date) return d.toISOString().slice(0,10);
+            const s = String(d).trim();
+            const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+            const dm = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (dm) return `${dm[3]}-${dm[2]}-${dm[1]}`;
+            const ts = Date.parse(s);
+            if (!isNaN(ts)) return new Date(ts).toISOString().slice(0,10);
+            return s;
+          };
+          ws.addRow([null, order.orderId, fmt(order.orderDate), order.customerName,
             item.itemName, item.quantity, item.unitPrice, order.orderStatus,
             order.paymentStatus, itemTotal, order.totalAmount,
-            order.deliveryDate, order.deliveryLocation, order.referredBy]);
+            fmt(order.deliveryDate), order.deliveryLocation, order.referredBy]);
         } else {
           ws.addRow([null, order.orderId, null, null, item.itemName, item.quantity,
             item.unitPrice, null, null, itemTotal, null, null, null, null]);
@@ -312,6 +404,11 @@ async function writeOrders(orders) {
 function getNextOrderId(orders) {
   if (orders.length === 0) return 1;
   return Math.max(...orders.map(o => o.orderId)) + 1;
+}
+
+function getCurrentMonthName() {
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return monthNames[new Date().getMonth()];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -344,6 +441,10 @@ app.post('/api/orders', async (req, res) => {
     const orders = await readOrders();
     const newOrder = req.body;
     newOrder.orderId = getNextOrderId(orders);
+    // Default month to current month when not provided by client
+    if (!newOrder.month || !String(newOrder.month).trim()) {
+      newOrder.month = getCurrentMonthName();
+    }
     newOrder.items = (newOrder.items || []).map(item => ({
       itemName: String(item.itemName || '').trim(),
       quantity: Number(item.quantity) || 0,
@@ -367,6 +468,10 @@ app.put('/api/orders/:id', async (req, res) => {
     if (idx === -1) return res.status(404).json({ error: 'Order not found' });
     const updated = req.body;
     updated.orderId = Number(req.params.id);
+    // Preserve existing month if client did not send one
+    if (!updated.month || !String(updated.month).trim()) {
+      updated.month = orders[idx].month || getCurrentMonthName();
+    }
     updated.items = (updated.items || []).map(item => ({
       itemName: String(item.itemName || '').trim(),
       quantity: Number(item.quantity) || 0,

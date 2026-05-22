@@ -4,6 +4,7 @@ let itemCatalog = [];
 let deleteTargetId = null;
 let currentPage = 1;
 const PAGE_SIZE = 10;
+let sortByOrderDate = null; // null = no sort, 'asc' or 'desc'
 
 const ITEM_PRICES = {
   'Sooji Puri': 3.99,
@@ -25,10 +26,45 @@ document.addEventListener('DOMContentLoaded', () => {
   loadOrders();
   loadItems();
 
-  // Auto-set month
-  const monthNames = ['January','February','March','April','May','June',
-    'July','August','September','October','November','December'];
-  document.getElementById('fMonth').value = monthNames[now.getMonth()];
+  // Order Date sorting handler
+  const th = document.getElementById('thOrderDate');
+  if (th) th.addEventListener('click', () => {
+    if (!sortByOrderDate) sortByOrderDate = 'asc';
+    else if (sortByOrderDate === 'asc') sortByOrderDate = 'desc';
+    else sortByOrderDate = null;
+    updateSortIcon();
+    filterOrders();
+  });
+  updateSortIcon();
+
+  // enable/disable Reset button based on date inputs
+  const dfInput = document.getElementById('filterDateFrom');
+  const dtInput = document.getElementById('filterDateTo');
+  const resetBtn = document.getElementById('filterDateResetBtn');
+  function updateResetButtonState() {
+    if (!resetBtn) return;
+    const has = (dfInput && dfInput.value) || (dtInput && dtInput.value);
+    resetBtn.disabled = !has;
+  }
+  // attach listeners
+  [dfInput, dtInput].forEach(el => {
+    if (!el) return;
+    el.addEventListener('input', updateResetButtonState);
+    el.addEventListener('change', updateResetButtonState);
+  });
+  // set initial state
+  updateResetButtonState();
+
+  // Month is set server-side; date-range filter inputs handle filtering
+  // Trigger search when pressing Enter in date inputs
+  try {
+    const df = document.getElementById('filterDateFrom');
+    const dt = document.getElementById('filterDateTo');
+    [df, dt].forEach(el => {
+      if (!el) return;
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); filterOrders(); } });
+    });
+  } catch (e) {}
 });
 
 // ── API Calls ────────────────────────────────────────────────────────────────
@@ -39,13 +75,22 @@ async function loadOrders() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     allOrders = await res.json();
     updateStats();
-    populateMonthFilter();
     filterOrders();
+    // show alert for today's deliveries (if any)
+    checkTodaysDeliveries();
     setLoadStatus(`Loaded ${allOrders.length} orders`, 'success');
   } catch (err) {
     console.error('Failed to load orders:', err);
     setLoadStatus('Failed to load orders. Click retry.', 'error');
   }
+}
+
+function updateSortIcon() {
+  const el = document.getElementById('orderDateSortIcon');
+  if (!el) return;
+  if (sortByOrderDate === 'asc') el.textContent = '▲';
+  else if (sortByOrderDate === 'desc') el.textContent = '▼';
+  else el.textContent = '';
 }
 
 async function loadItems() {
@@ -83,6 +128,83 @@ function hideActionLoader() {
   overlay.style.display = 'none';
 }
 
+// Parse a date in DD/MM/YYYY or ISO and return YYYY-MM-DD or null
+function parseAnyDateToISO(d) {
+  if (!d) return null;
+  if (d.includes('/')) {
+    const parts = d.split('/');
+    if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+  }
+  return (d || '').split('T')[0] || null;
+}
+
+// Check for deliveries scheduled for today and show an alert banner
+function checkTodaysDeliveries() {
+  try {
+    const wrap = document.getElementById('deliveryAlertWrap');
+    if (!wrap) return;
+    // don't show alert again if already dismissed this session
+    if (sessionStorage.getItem('deliveryAlertDismissed') === 'true') {
+      wrap.innerHTML = '';
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const todays = allOrders.filter(o => {
+      const iso = parseAnyDateToISO(o.deliveryDate || '');
+      return iso === today && o.orderStatus !== 'Delivered';
+    });
+    if (todays.length === 0) {
+      wrap.innerHTML = '';
+      return;
+    }
+    const plural = todays.length > 1 ? 'orders' : 'order';
+    wrap.innerHTML = `
+      <div class="alert" style="background: linear-gradient(90deg, rgba(212,32,39,0.08), rgba(212,32,39,0.04)); border:1px solid rgba(212,32,39,0.12); padding:12px 16px; border-radius:10px; display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;gap:12px;align-items:center">
+          <i class="bi bi-bell-fill" style="color:var(--saffron);font-size:1.1rem"></i>
+          <div style="font-weight:600">You have ${todays.length} ${plural} scheduled for delivery today.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-add" onclick="showTodaysDeliveries()">Show</button>
+          <button class="btn-cancel" onclick="dismissDeliveryAlert()">Dismiss</button>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    console.error('checkTodaysDeliveries', e);
+  }
+}
+
+function showTodaysDeliveries() {
+  const today = new Date().toISOString().split('T')[0];
+  const filtered = allOrders.filter(o => parseAnyDateToISO(o.deliveryDate || '') === today && o.orderStatus !== 'Delivered');
+  if (filtered.length === 0) {
+    showToast('No deliveries found for today', 'neutral');
+    return;
+  }
+  // clear other filters/search to avoid accidental masking
+  try { document.getElementById('searchInput').value = ''; } catch (e) {}
+  try { document.getElementById('filterStatus').value = ''; } catch (e) {}
+  try { document.getElementById('filterPayment').value = ''; } catch (e) {}
+  currentPage = 1;
+  window._filteredOrders = filtered;
+  renderOrders(filtered);
+  // bring orders table into view for convenience
+  try {
+    const card = document.querySelector('.orders-card');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {}
+}
+
+function dismissDeliveryAlert() {
+  // wipe out the alert immediately and remember dismissal for this session
+  const wrap = document.getElementById('deliveryAlertWrap');
+  if (wrap) wrap.innerHTML = '';
+  sessionStorage.setItem('deliveryAlertDismissed', 'true');
+  // reload all orders quietly (top status bar only, no full-screen loader)
+  loadOrders();
+}
+
 // ── Stats ────────────────────────────────────────────────────────────────────
 function updateStats() {
   document.getElementById('statTotal').textContent = allOrders.length;
@@ -103,7 +225,7 @@ let activeCardFilter = null;
 function getTodayOrders() {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   return allOrders.filter(o => {
-    const d = o.orderDate || '';
+    const d = o.deliveryDate || '';
     const normalized = d.includes('/') ? d.split('/').reverse().join('-') : d;
     return normalized === today;
   });
@@ -119,6 +241,8 @@ function getFilteredByCard(filter) {
     default: return allOrders;
   }
 }
+
+  // no sorting helpers (sorting by Order Date removed)
 
 function toggleCardFilter(filter) {
   // toggle off if same card clicked again
@@ -137,22 +261,17 @@ function toggleCardFilter(filter) {
   document.getElementById('searchInput').value = '';
   document.getElementById('filterStatus').value = '';
   document.getElementById('filterPayment').value = '';
-  document.getElementById('filterMonth').value = '';
+  const df = document.getElementById('filterDateFrom');
+  const dt = document.getElementById('filterDateTo');
+  if (df) df.value = '';
+  if (dt) dt.value = '';
   currentPage = 1;
   renderOrders(activeCardFilter ? getFilteredByCard(activeCardFilter) : allOrders);
 }
 
 // ── Month Filter Dropdown ────────────────────────────────────────────────────
 function populateMonthFilter() {
-  const sel = document.getElementById('filterMonth');
-  const months = [...new Set(allOrders.map(o => o.month).filter(Boolean))];
-  while (sel.options.length > 1) sel.remove(1);
-  months.forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m;
-    opt.textContent = m;
-    sel.appendChild(opt);
-  });
+  // populateMonthFilter is no longer used (replaced by date-range picker)
 }
 
 // ── Filter & Render ──────────────────────────────────────────────────────────
@@ -164,7 +283,8 @@ function filterOrders() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   const status = document.getElementById('filterStatus').value;
   const payment = document.getElementById('filterPayment').value;
-  const month = document.getElementById('filterMonth').value;
+  const from = document.getElementById('filterDateFrom').value;
+  const to = document.getElementById('filterDateTo').value;
 
   let filtered = allOrders;
 
@@ -178,13 +298,66 @@ function filterOrders() {
   }
   if (status) filtered = filtered.filter(o => o.orderStatus === status);
   if (payment) filtered = filtered.filter(o => o.paymentStatus === payment);
-  if (month) filtered = filtered.filter(o => o.month === month);
+  // Filter by date range if provided. Use orderDate only (parse DD/MM/YYYY or ISO).
+  const parseOrderDateISO = (d) => {
+    if (!d) return null;
+    if (d.includes('/')) {
+      const parts = d.split('/');
+      if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+    }
+    return d.split('T')[0];
+  };
+
+  if (from) {
+    filtered = filtered.filter(o => {
+      const iso = parseOrderDateISO(o.orderDate || '');
+      return iso && iso >= from;
+    });
+  }
+  if (to) {
+    filtered = filtered.filter(o => {
+      const iso = parseOrderDateISO(o.orderDate || '');
+      return iso && iso <= to;
+    });
+  }
 
   currentPage = 1;
   renderOrders(filtered);
 }
 
+// Clear date range filters and reload all orders
+async function clearDateFilters() {
+  const df = document.getElementById('filterDateFrom');
+  const dt = document.getElementById('filterDateTo');
+  if (df) df.value = '';
+  if (dt) dt.value = '';
+  // update Reset button state immediately
+  try { document.getElementById('filterDateResetBtn').disabled = true; } catch (e) {}
+  // show loading overlay and status while reloading
+  try {
+    showActionLoader('Loading orders…');
+    setLoadStatus('Loading orders…', 'loading');
+    await loadOrders();
+  } finally {
+    hideActionLoader();
+    try { document.getElementById('filterDateResetBtn').disabled = true; } catch (e) {}
+  }
+  showToast('Date filters cleared — showing all orders', 'success');
+}
+
 function renderOrders(orders) {
+  // apply sorting if requested
+  if (sortByOrderDate) {
+    orders = orders.slice().sort((a,b) => {
+      const da = (a.orderDate || '').split('T')[0];
+      const db = (b.orderDate || '').split('T')[0];
+      if (!da && !db) return 0;
+      if (!da) return sortByOrderDate === 'asc' ? 1 : -1;
+      if (!db) return sortByOrderDate === 'asc' ? -1 : 1;
+      if (da === db) return 0;
+      return (da < db ? -1 : 1) * (sortByOrderDate === 'asc' ? 1 : -1);
+    });
+  }
   const tbody = document.getElementById('ordersBody');
   const noOrders = document.getElementById('noOrders');
   document.getElementById('orderCount').textContent = orders.length;
@@ -226,7 +399,6 @@ function renderOrders(orders) {
     const orderDateDisplay = o.orderDate ? o.orderDate.replace(/[T ].*/,'') : '';
 
     return `<tr onclick="openDetailModal(${o.orderId})">
-      <td data-label="Order"><strong style="color:var(--saffron)">#${o.orderId}</strong></td>
       <td data-label="Order Date" style="white-space:nowrap;font-size:.82rem"><i class="bi bi-calendar3" style="color:var(--saffron);margin-right:4px"></i>${orderDateDisplay}</td>
       <td data-label="Customer">
         <div class="customer-cell">
@@ -368,7 +540,6 @@ function openNewOrderModal() {
 
   const monthNames = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
-  document.getElementById('fMonth').value = monthNames[now.getMonth()];
   document.getElementById('fStatus').value = 'Pending';
   document.getElementById('fPayment').value = 'No';
 
@@ -386,15 +557,29 @@ function openEditModal(orderId) {
 
   document.getElementById('modalTitle').innerHTML = `<i class="bi bi-pencil-square"></i> Edit Order #${orderId}`;
   document.getElementById('editOrderId').value = orderId;
-  document.getElementById('fMonth').value = order.month || '';
-  const ordParts = (order.orderDate || '').split('/');
-  document.getElementById('fOrderDate').value = ordParts.length === 3 ? `${ordParts[2]}-${ordParts[1]}-${ordParts[0]}` : '';
+  // support multiple stored formats: DD/MM/YYYY or ISO YYYY-MM-DD[THH:MM:SS]
+  const rawOrderDate = order.orderDate || '';
+  let orderDateValue = '';
+  if (rawOrderDate.includes('/')) {
+    const parts = rawOrderDate.split('/');
+    if (parts.length === 3) orderDateValue = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+  } else if (rawOrderDate.includes('-')) {
+    orderDateValue = rawOrderDate.split('T')[0];
+  }
+  document.getElementById('fOrderDate').value = orderDateValue;
   document.getElementById('fCustomer').value = order.customerName || '';
   document.getElementById('fStatus').value = order.orderStatus || 'Pending';
   document.getElementById('fPayment').value = order.paymentStatus || 'No';
   // Convert DD/MM/YYYY to YYYY-MM-DD for date input
-  const delParts = (order.deliveryDate || '').split('/');
-  document.getElementById('fDeliveryDate').value = delParts.length === 3 ? `${delParts[2]}-${delParts[1]}-${delParts[0]}` : '';
+  const rawDeliveryDate = order.deliveryDate || '';
+  let deliveryDateValue = '';
+  if (rawDeliveryDate.includes('/')) {
+    const dparts = rawDeliveryDate.split('/');
+    if (dparts.length === 3) deliveryDateValue = `${dparts[2]}-${dparts[1].padStart(2,'0')}-${dparts[0].padStart(2,'0')}`;
+  } else if (rawDeliveryDate.includes('-')) {
+    deliveryDateValue = rawDeliveryDate.split('T')[0];
+  }
+  document.getElementById('fDeliveryDate').value = deliveryDateValue;
   document.getElementById('fDeliveryLoc').value = order.deliveryLocation || '';
 
   const container = document.getElementById('itemsContainer');
@@ -535,7 +720,6 @@ async function saveOrder() {
   }
 
   const order = {
-    month: document.getElementById('fMonth').value,
     orderDate: (() => { const v = document.getElementById('fOrderDate').value; return v ? v.split('-').reverse().join('/') : ''; })(),
     customerName: document.getElementById('fCustomer').value.trim(),
     orderStatus: document.getElementById('fStatus').value,

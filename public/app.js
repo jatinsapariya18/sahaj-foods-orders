@@ -440,13 +440,53 @@ function addItemRow(item = null) {
 
   container.appendChild(div);
   updateOrderTotal();
+
+  // UX improvements: autofocus new row and handle Enter to add a new row
+  const selectEl = div.querySelector('.item-name');
+  const qtyEl = div.querySelector('.item-qty');
+  const priceEl = div.querySelector('.item-price');
+
+  // focus the item select for quick input
+  if (selectEl) {
+    setTimeout(() => { try { selectEl.focus(); } catch (e) {} }, 50);
+  }
+
+  const handleEnterAdd = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const container = document.getElementById('itemsContainer');
+      // if this is the last row, add a new one
+      if (div === container.lastElementChild) {
+        addItemRow();
+      } else {
+        // otherwise focus the next row's item select
+        const next = div.nextElementSibling;
+        if (next) {
+          const nextSelect = next.querySelector('.item-name');
+          if (nextSelect) nextSelect.focus();
+        }
+      }
+    }
+  };
+
+  [selectEl, qtyEl, priceEl].forEach(el => {
+    if (!el) return;
+    el.addEventListener('keydown', handleEnterAdd);
+  });
 }
 
 function removeItemRow(btn) {
   const container = document.getElementById('itemsContainer');
   if (container.children.length <= 1) return;
-  btn.closest('.item-row').remove();
+  const row = btn.closest('.item-row');
+  const prev = row.previousElementSibling;
+  row.remove();
   updateOrderTotal();
+  // focus previous row's item select for smoother workflow
+  if (prev) {
+    const sel = prev.querySelector('.item-name');
+    if (sel) sel.focus();
+  }
 }
 
 function autoFillPrice(input) {

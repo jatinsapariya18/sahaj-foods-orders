@@ -882,6 +882,7 @@
       .nav-right { justify-content: center; }
 
       .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stats-grid .stat-card:last-child { grid-column: 1 / -1; }
       .stat-card { padding: 14px; gap: 10px; }
       .stat-icon { width: 40px; height: 40px; font-size: 1.1rem; border-radius: 10px; }
       .stat-info .value { font-size: 1.3rem; }
@@ -932,6 +933,9 @@
       .date-filter-inputs .filter-label {
         font-size: .65rem;
         margin-bottom: 3px;
+      }
+      .date-arrow-sep {
+        display: none !important;
       }\n      .date-filter-actions {
         display: flex;
         gap: 8px;
@@ -1134,7 +1138,7 @@
             <input type="date" id="filterDateFrom" class="filter-select" title="Select start date">
           </div>
         </div>
-        <div style="display:flex;align-items:flex-end;padding-bottom:12px;color:var(--gray-400);font-size:1rem"><i class="bi bi-arrow-right"></i></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:12px;color:var(--gray-400);font-size:1rem" class="date-arrow-sep"><i class="bi bi-arrow-right"></i></div>
         <div class="filter-date-group">
           <label class="filter-label" for="filterDateTo"><i class="bi bi-arrow-left-circle" style="font-size:.7rem"></i> To</label>
           <div class="date-input-wrap">
@@ -1230,7 +1234,9 @@
               <label class="form-label">Delivery Date</label>
               <input type="date" class="form-control" id="fDeliveryDate">
             </div>
-            <div class="col-md-3">
+          </div>
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
               <label class="form-label">Delivery Location</label>
               <input type="text" class="form-control" id="fDeliveryLoc" placeholder="e.g. Hamilton">
             </div>

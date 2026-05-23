@@ -237,38 +237,44 @@
     }
     .filter-select:focus { border-color: var(--saffron); }
 
-    .filter-date-group { display:flex; flex-direction:column; gap:4px; }
-    .filter-label { font-size:.82rem; color:var(--gray-500); font-weight:600; margin:0; line-height:1; height:40px; display:flex; align-items:center; }
+    .filter-date-group { display:flex; flex-direction:column; gap:0; }
 
     /* Date filter section */
     .date-filter-row {
       display: flex;
       align-items: flex-end;
-      gap: 12px;
+      gap: 14px;
       flex-wrap: wrap;
-      background: var(--gray-50);
-      border: 1px solid var(--gray-200);
-      border-radius: 10px;
-      padding: 10px 14px;
+      background: linear-gradient(135deg, #fff8f8 0%, #fff 60%, #f8f6ff 100%);
+      border: 1.5px solid var(--gray-200);
+      border-radius: 14px;
+      padding: 14px 18px;
       width: 100%;
+      box-shadow: 0 2px 8px rgba(212,32,39,0.04);
     }
     .date-filter-header {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-weight: 600;
-      font-size: .88rem;
+      gap: 8px;
+      font-weight: 700;
+      font-size: .9rem;
       color: var(--dark);
       height: 40px;
       white-space: nowrap;
     }
+    .date-filter-header i {
+      background: linear-gradient(135deg, var(--saffron), #e85d04);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 1.15rem;
+    }
     .date-filter-inputs {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex: 0 1 auto;
       min-width: 0;
     }
-    .date-filter-inputs .filter-date-group { flex: 0 1 170px; min-width: 0; }
+    .date-filter-inputs .filter-date-group { flex: 0 1 180px; min-width: 0; }
     .date-filter-inputs .filter-select { width: 100%; }
     .date-filter-actions {
       display: flex;
@@ -276,27 +282,47 @@
       gap: 8px;
     }
 
-    /* Date input with icon wrapper */
+    /* Fancy date input wrapper */
     .date-input-wrap {
       position: relative;
       width: 100%;
     }
-    .date-input-wrap .bi-calendar-event-fill {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--saffron);
-      font-size: .95rem;
-      pointer-events: none;
-      z-index: 1;
-    }
     .date-input-wrap input[type="date"] {
-      padding-left: 34px;
       width: 100%;
       box-sizing: border-box;
       max-width: 100%;
-      height: 40px;
+      height: 42px;
+      border: 2px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: .85rem;
+      font-family: 'Poppins', sans-serif;
+      color: var(--dark);
+      background: #fff;
+      transition: border-color .25s, box-shadow .25s;
+      outline: none;
+      cursor: pointer;
+    }
+    .date-input-wrap input[type="date"]:hover {
+      border-color: #e0a0a0;
+    }
+    .date-input-wrap input[type="date"]:focus {
+      border-color: var(--saffron);
+      box-shadow: 0 0 0 3px rgba(212,32,39,0.1);
+    }
+    .filter-label {
+      font-size: .78rem;
+      color: var(--gray-500);
+      font-weight: 600;
+      margin: 0;
+      line-height: 1;
+      height: auto;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 4px;
     }
 
     .load-status {
@@ -876,8 +902,9 @@
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
-        padding: 10px 12px;
+        padding: 12px;
         overflow: hidden;
+        background: linear-gradient(135deg, #fff8f8 0%, #fff 100%);
       }
       .date-filter-header {
         height: auto;
@@ -886,33 +913,26 @@
       .date-filter-inputs {
         display: flex;
         flex-direction: row;
-        gap: 8px;
+        gap: 6px;
         overflow: hidden;
+        align-items: flex-end;
       }
       .date-filter-inputs .filter-date-group {
         flex: 1;
         min-width: 0;
         overflow: hidden;
       }
-      .date-filter-inputs .filter-select {
+      .date-filter-inputs .date-input-wrap input[type="date"] {
         height: 36px;
-        padding: 6px 8px 6px 30px;
+        padding: 6px 8px;
         font-size: .78rem;
         max-width: 100%;
         box-sizing: border-box;
       }
       .date-filter-inputs .filter-label {
-        height: auto;
-        font-size: .7rem;
-      }
-      .date-filter-inputs .filter-label .label-cal-icon {
-        display: none;
-      }
-      .date-input-wrap .bi-calendar-event-fill {
-        left: 8px;
-        font-size: .75rem;
-      }
-      .date-filter-actions {
+        font-size: .65rem;
+        margin-bottom: 3px;
+      }\n      .date-filter-actions {
         display: flex;
         gap: 8px;
       }
@@ -1109,16 +1129,15 @@
       </div>
       <div class="date-filter-inputs">
         <div class="filter-date-group">
-          <label class="filter-label" for="filterDateFrom"><i class="bi bi-calendar-event-fill label-cal-icon" style="margin-right:4px;color:var(--saffron)"></i> From</label>
+          <label class="filter-label" for="filterDateFrom"><i class="bi bi-arrow-right-circle" style="font-size:.7rem"></i> From</label>
           <div class="date-input-wrap">
-            <i class="bi bi-calendar-event-fill"></i>
             <input type="date" id="filterDateFrom" class="filter-select" title="Select start date">
           </div>
         </div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:12px;color:var(--gray-400);font-size:1rem"><i class="bi bi-arrow-right"></i></div>
         <div class="filter-date-group">
-          <label class="filter-label" for="filterDateTo"><i class="bi bi-calendar-event-fill label-cal-icon" style="margin-right:4px;color:var(--saffron)"></i> To</label>
+          <label class="filter-label" for="filterDateTo"><i class="bi bi-arrow-left-circle" style="font-size:.7rem"></i> To</label>
           <div class="date-input-wrap">
-            <i class="bi bi-calendar-event-fill"></i>
             <input type="date" id="filterDateTo" class="filter-select" title="Select end date">
           </div>
         </div>

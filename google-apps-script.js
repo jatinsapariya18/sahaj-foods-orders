@@ -55,7 +55,7 @@ function doGet(e) {
       return jsonResponse({ data: [] });
     }
 
-    const data = sheet.getRange(1, 1, lastRow, 14).getValues();
+    const data = sheet.getRange(1, 1, lastRow, HEADERS.length).getValues();
 
     // Convert Date objects to DD/MM/YYYY strings
     for (let i = 0; i < data.length; i++) {
@@ -87,12 +87,12 @@ function doPost(e) {
 
       // Clear everything below the header row
       if (lastRow > 1) {
-        sheet.getRange(2, 1, lastRow - 1, 14).clearContent();
+        sheet.getRange(2, 1, lastRow - 1, HEADERS.length).clearContent();
       }
 
       // Write the new rows
       if (payload.rows && payload.rows.length > 0) {
-        sheet.getRange(2, 1, payload.rows.length, 14).setValues(payload.rows);
+        sheet.getRange(2, 1, payload.rows.length, HEADERS.length).setValues(payload.rows);
       }
 
       SpreadsheetApp.flush();

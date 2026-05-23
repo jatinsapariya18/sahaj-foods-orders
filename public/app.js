@@ -209,6 +209,7 @@ function dismissDeliveryAlert() {
 function updateStats() {
   document.getElementById('statTotal').textContent = allOrders.length;
   document.getElementById('statToday').textContent = getTodayOrders().length;
+  document.getElementById('statCreatedToday').textContent = getCreatedTodayOrders().length;
   document.getElementById('statPending').textContent =
     allOrders.filter(o => o.orderStatus === 'Pending').length;
   document.getElementById('statDelivered').textContent =
@@ -231,10 +232,20 @@ function getTodayOrders() {
   });
 }
 
+function getCreatedTodayOrders() {
+  const today = new Date().toISOString().split('T')[0];
+  return allOrders.filter(o => {
+    const d = o.orderDate || '';
+    const normalized = d.includes('/') ? d.split('/').reverse().join('-') : d;
+    return normalized === today;
+  });
+}
+
 function getFilteredByCard(filter) {
   switch (filter) {
     case 'all': return allOrders;
     case 'today': return getTodayOrders();
+    case 'createdToday': return getCreatedTodayOrders();
     case 'pending': return allOrders.filter(o => o.orderStatus === 'Pending');
     case 'delivered': return allOrders.filter(o => o.orderStatus === 'Delivered');
     case 'unpaid': return allOrders.filter(o => o.paymentStatus === 'No');
@@ -496,6 +507,7 @@ function openDetailModal(orderId) {
       <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Delivery Location</span><div style="font-weight:500;font-size:.95rem;margin-top:2px"><i class="bi bi-geo-alt" style="color:var(--saffron);margin-right:4px"></i>${escapeHtml(o.deliveryLocation || '-')}</div></div>
       <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Delivery Status</span><div style="margin-top:4px">${statusBadge}</div></div>
       <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Payment Status</span><div style="margin-top:4px">${payBadge}</div></div>
+      <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Payment Mode</span><div style="font-weight:500;font-size:.95rem;margin-top:2px"><i class="bi bi-wallet2" style="color:var(--saffron);margin-right:4px"></i>${escapeHtml(o.paymentMode || '-')}</div></div>
     </div>
     <div style="border-top:1px solid var(--gray-200);padding-top:16px">
       <h6 style="font-weight:600;margin-bottom:10px"><i class="bi bi-basket-fill" style="color:var(--saffron)"></i> Items</h6>
@@ -542,6 +554,7 @@ function openNewOrderModal() {
     'July','August','September','October','November','December'];
   document.getElementById('fStatus').value = 'Pending';
   document.getElementById('fPayment').value = 'No';
+  document.getElementById('fPaymentMode').value = '';
 
   document.getElementById('itemsContainer').innerHTML = '';
   addItemRow();
@@ -570,6 +583,7 @@ function openEditModal(orderId) {
   document.getElementById('fCustomer').value = order.customerName || '';
   document.getElementById('fStatus').value = order.orderStatus || 'Pending';
   document.getElementById('fPayment').value = order.paymentStatus || 'No';
+  document.getElementById('fPaymentMode').value = order.paymentMode || '';
   // Convert DD/MM/YYYY to YYYY-MM-DD for date input
   const rawDeliveryDate = order.deliveryDate || '';
   let deliveryDateValue = '';
@@ -724,6 +738,7 @@ async function saveOrder() {
     customerName: document.getElementById('fCustomer').value.trim(),
     orderStatus: document.getElementById('fStatus').value,
     paymentStatus: document.getElementById('fPayment').value,
+    paymentMode: document.getElementById('fPaymentMode').value,
     deliveryDate: (() => { const v = document.getElementById('fDeliveryDate').value; return v ? v.split('-').reverse().join('/') : ''; })(),
     deliveryLocation: document.getElementById('fDeliveryLoc').value.trim(),
     referredBy: '',

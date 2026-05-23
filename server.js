@@ -127,6 +127,7 @@ function parseRowsToOrders(rows) {
     const deliveryDate = row[11];
     const deliveryLocation = row[12];
     const referredBy = row[13];
+    const paymentMode = row[14];
 
     if (monthVal && !orderId && !itemName) {
       currentMonth = String(monthVal).trim();
@@ -169,6 +170,7 @@ function parseRowsToOrders(rows) {
         customerName: customerName ? String(customerName).trim() : '',
         orderStatus: orderStatus ? String(orderStatus).trim() : '',
         paymentStatus: paymentStatus ? String(paymentStatus).trim() : '',
+        paymentMode: paymentMode ? String(paymentMode).trim() : '',
         deliveryDate: toISODate(deliveryDate),
         deliveryLocation: deliveryLocation ? String(deliveryLocation).trim() : '',
         referredBy: referredBy ? String(referredBy).trim() : '',
@@ -211,7 +213,7 @@ function ordersToRows(orders) {
   };
 
   for (const [month, monthOrders] of Object.entries(monthGroups)) {
-    rows.push([month, '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    rows.push([month, '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
     monthOrders.forEach(order => {
       order.items.forEach((item, idx) => {
         const itemTotal = Math.round(item.quantity * item.unitPrice * 100) / 100;
@@ -221,12 +223,12 @@ function ordersToRows(orders) {
             item.itemName, item.quantity, item.unitPrice,
             order.orderStatus, order.paymentStatus,
             itemTotal, order.totalAmount, order.deliveryDate, order.deliveryLocation,
-            order.referredBy
+            order.referredBy, order.paymentMode || ''
           ]);
         } else {
           rows.push([
             '', order.orderId, '', '', item.itemName, item.quantity, item.unitPrice,
-            '', '', itemTotal, '', '', '', ''
+            '', '', itemTotal, '', '', '', '', ''
           ]);
         }
       });
@@ -275,6 +277,7 @@ async function readOrdersFromExcel() {
     const deliveryDate = row.getCell(12).value;
     const deliveryLocation = row.getCell(13).value;
     const referredBy = row.getCell(14).value;
+    const paymentMode = row.getCell(15).value;
 
     if (monthVal && !orderId && !itemName) { currentMonth = String(monthVal).trim(); return; }
     if (monthVal && orderId) { currentMonth = String(monthVal).trim(); }
@@ -308,6 +311,7 @@ async function readOrdersFromExcel() {
         customerName: customerName ? String(customerName).trim() : '',
         orderStatus: orderStatus ? String(orderStatus).trim() : '',
         paymentStatus: paymentStatus ? String(paymentStatus).trim() : '',
+        paymentMode: paymentMode ? String(paymentMode).trim() : '',
         deliveryDate: toISODate(deliveryDate),
         deliveryLocation: deliveryLocation ? String(deliveryLocation).trim() : '',
         referredBy: referredBy ? String(referredBy).trim() : '',

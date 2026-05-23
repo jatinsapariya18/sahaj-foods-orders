@@ -20,7 +20,7 @@ const HEADERS = [
   'Month', 'Order Id', 'Order Date', 'Customer Name', 'Item Name',
   'Quantity', 'Unit Price', 'Order Status', 'Payment Status',
   'Item total Amount', 'Total Order Amount', 'Delivery Date', 'Delivery Location',
-  'Referred By'
+  'Referred By', 'Payment Mode'
 ];
 
 function ensureHeaders(sheet) {

@@ -104,7 +104,7 @@
     /* ── Stats Cards ────────────────────────────────── */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(7, 1fr);
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -137,6 +137,7 @@
     }
     .stat-icon.total { background: var(--saffron-light); color: var(--saffron); }
     .stat-icon.today { background: #E3F2FD; color: #1976D2; }
+    .stat-icon.created-today { background: #E8F5E9; color: #388E3C; }
     .stat-icon.pending { background: var(--gold-light); color: var(--gold); }
     .stat-icon.delivered { background: var(--green-light); color: var(--green); }
     .stat-icon.unpaid { background: var(--red-light); color: var(--red); }
@@ -1041,8 +1042,15 @@
     <div class="stat-card clickable" data-filter="today" onclick="toggleCardFilter('today')">
       <div class="stat-icon today"><i class="bi bi-calendar-event-fill"></i></div>
       <div class="stat-info">
-        <span class="label">Today's Orders</span>
+        <span class="label">Deliver Today</span>
         <span class="value" style="color:#1976D2" id="statToday">0</span>
+      </div>
+    </div>
+    <div class="stat-card clickable" data-filter="createdToday" onclick="toggleCardFilter('createdToday')">
+      <div class="stat-icon created-today"><i class="bi bi-plus-circle-fill"></i></div>
+      <div class="stat-info">
+        <span class="label">Created Today</span>
+        <span class="value" style="color:#388E3C" id="statCreatedToday">0</span>
       </div>
     </div>
     <div class="stat-card clickable" data-filter="pending" onclick="toggleCardFilter('pending')">
@@ -1189,6 +1197,14 @@
               <select class="form-select" id="fPayment">
                 <option value="No">Unpaid</option>
                 <option value="Yes">Paid</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Payment Mode</label>
+              <select class="form-select" id="fPaymentMode">
+                <option value="">-- Select --</option>
+                <option value="Cash">Cash</option>
+                <option value="Interac">Interac</option>
               </select>
             </div>
             <div class="col-md-3">

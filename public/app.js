@@ -186,6 +186,7 @@ function showTodaysDeliveries() {
   try { document.getElementById('searchInput').value = ''; } catch (e) {}
   try { document.getElementById('filterStatus').value = ''; } catch (e) {}
   try { document.getElementById('filterPayment').value = ''; } catch (e) {}
+  try { document.getElementById('filterPaymentMode').value = ''; } catch (e) {}
   currentPage = 1;
   window._filteredOrders = filtered;
   renderOrders(filtered);
@@ -212,8 +213,6 @@ function updateStats() {
   document.getElementById('statCreatedToday').textContent = getCreatedTodayOrders().length;
   document.getElementById('statPending').textContent =
     allOrders.filter(o => o.orderStatus === 'Pending').length;
-  document.getElementById('statDelivered').textContent =
-    allOrders.filter(o => o.orderStatus === 'Delivered').length;
   document.getElementById('statUnpaid').textContent =
     allOrders.filter(o => o.paymentStatus === 'No').length;
   const revenue = allOrders.reduce((s, o) => s + o.totalAmount, 0);
@@ -247,7 +246,6 @@ function getFilteredByCard(filter) {
     case 'today': return getTodayOrders();
     case 'createdToday': return getCreatedTodayOrders();
     case 'pending': return allOrders.filter(o => o.orderStatus === 'Pending');
-    case 'delivered': return allOrders.filter(o => o.orderStatus === 'Delivered');
     case 'unpaid': return allOrders.filter(o => o.paymentStatus === 'No');
     default: return allOrders;
   }
@@ -272,6 +270,7 @@ function toggleCardFilter(filter) {
   document.getElementById('searchInput').value = '';
   document.getElementById('filterStatus').value = '';
   document.getElementById('filterPayment').value = '';
+  document.getElementById('filterPaymentMode').value = '';
   const df = document.getElementById('filterDateFrom');
   const dt = document.getElementById('filterDateTo');
   if (df) df.value = '';
@@ -294,6 +293,7 @@ function filterOrders() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   const status = document.getElementById('filterStatus').value;
   const payment = document.getElementById('filterPayment').value;
+  const paymentMode = document.getElementById('filterPaymentMode').value;
   const from = document.getElementById('filterDateFrom').value;
   const to = document.getElementById('filterDateTo').value;
 
@@ -309,6 +309,7 @@ function filterOrders() {
   }
   if (status) filtered = filtered.filter(o => o.orderStatus === status);
   if (payment) filtered = filtered.filter(o => o.paymentStatus === payment);
+  if (paymentMode) filtered = filtered.filter(o => o.paymentMode === paymentMode);
   // Filter by date range if provided. Use orderDate only (parse DD/MM/YYYY or ISO).
   const parseOrderDateISO = (d) => {
     if (!d) return null;

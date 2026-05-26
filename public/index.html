@@ -104,7 +104,7 @@
     /* ── Stats Cards ────────────────────────────────── */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -882,7 +882,6 @@
       .nav-right { justify-content: center; }
 
       .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      .stats-grid .stat-card:last-child { grid-column: 1 / -1; }
       .stat-card { padding: 14px; gap: 10px; }
       .stat-icon { width: 40px; height: 40px; font-size: 1.1rem; border-radius: 10px; }
       .stat-info .value { font-size: 1.3rem; }
@@ -1084,13 +1083,6 @@
         <span class="value" style="color:var(--gold)" id="statPending">0</span>
       </div>
     </div>
-    <div class="stat-card clickable" data-filter="delivered" onclick="toggleCardFilter('delivered')">
-      <div class="stat-icon delivered"><i class="bi bi-check-circle-fill"></i></div>
-      <div class="stat-info">
-        <span class="label">Delivered</span>
-        <span class="value" style="color:var(--green)" id="statDelivered">0</span>
-      </div>
-    </div>
     <div class="stat-card clickable" data-filter="unpaid" onclick="toggleCardFilter('unpaid')">
       <div class="stat-icon unpaid"><i class="bi bi-cash-stack"></i></div>
       <div class="stat-info">
@@ -1125,6 +1117,11 @@
       <option value="">All Payments</option>
       <option value="Yes">Paid</option>
       <option value="No">Unpaid</option>
+    </select>
+    <select class="filter-select" id="filterPaymentMode" onchange="filterOrders()">
+      <option value="">All Pay Modes</option>
+      <option value="Cash">Cash</option>
+      <option value="Interac">Interac</option>
     </select>
     <div class="date-filter-row">
       <div class="date-filter-header">

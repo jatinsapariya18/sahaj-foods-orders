@@ -112,7 +112,6 @@ function parseRowsToOrders(rows) {
   const orders = [];
   let currentOrder = null;
   let currentMonth = '';
-
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const monthVal = row[0];
@@ -128,6 +127,7 @@ function parseRowsToOrders(rows) {
     const deliveryLocation = row[12];
     const referredBy = row[13];
     const paymentMode = row[14];
+    const applyHst = row[15];
 
     if (monthVal && !orderId && !itemName) {
       currentMonth = String(monthVal).trim();
@@ -170,6 +170,7 @@ function parseRowsToOrders(rows) {
         customerName: customerName ? String(customerName).trim() : '',
         orderStatus: orderStatus ? String(orderStatus).trim() : '',
         paymentStatus: paymentStatus ? String(paymentStatus).trim() : '',
+        applyHst: String(applyHst || '').trim().toLowerCase() === 'yes' ? 'Yes' : 'No',
         paymentMode: paymentMode ? String(paymentMode).trim() : '',
         deliveryDate: toISODate(deliveryDate),
         deliveryLocation: deliveryLocation ? String(deliveryLocation).trim() : '',
@@ -213,7 +214,7 @@ function ordersToRows(orders) {
   };
 
   for (const [month, monthOrders] of Object.entries(monthGroups)) {
-    rows.push([month, '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    rows.push([month, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
     monthOrders.forEach(order => {
       order.items.forEach((item, idx) => {
         const itemTotal = Math.round(item.quantity * item.unitPrice * 100) / 100;
@@ -223,12 +224,12 @@ function ordersToRows(orders) {
             item.itemName, item.quantity, item.unitPrice,
             order.orderStatus, order.paymentStatus,
             itemTotal, order.totalAmount, order.deliveryDate, order.deliveryLocation,
-            order.referredBy, order.paymentMode || ''
+            order.referredBy, order.paymentMode || '', order.applyHst || 'No'
           ]);
         } else {
           rows.push([
             '', order.orderId, '', '', item.itemName, item.quantity, item.unitPrice,
-            '', '', itemTotal, '', '', '', '', ''
+            '', '', itemTotal, '', '', '', '', '', ''
           ]);
         }
       });
@@ -278,6 +279,7 @@ async function readOrdersFromExcel() {
     const deliveryLocation = row.getCell(13).value;
     const referredBy = row.getCell(14).value;
     const paymentMode = row.getCell(15).value;
+    const applyHst = row.getCell(16).value;
 
     if (monthVal && !orderId && !itemName) { currentMonth = String(monthVal).trim(); return; }
     if (monthVal && orderId) { currentMonth = String(monthVal).trim(); }
@@ -311,6 +313,7 @@ async function readOrdersFromExcel() {
         customerName: customerName ? String(customerName).trim() : '',
         orderStatus: orderStatus ? String(orderStatus).trim() : '',
         paymentStatus: paymentStatus ? String(paymentStatus).trim() : '',
+        applyHst: String(applyHst || '').trim().toLowerCase() === 'yes' ? 'Yes' : 'No',
         paymentMode: paymentMode ? String(paymentMode).trim() : '',
         deliveryDate: toISODate(deliveryDate),
         deliveryLocation: deliveryLocation ? String(deliveryLocation).trim() : '',
@@ -338,7 +341,7 @@ async function writeOrdersToExcel(orders) {
     'Month', 'Order Id', 'Order Date', 'Customer Name', 'Item Name',
     'Quantity', 'Unit Price', 'Order Status', 'Payment Status',
     'Item total Amount ', 'Total Order Amount', 'Delivery Date', 'Delivery Location',
-    'Referred By'
+    'Referred By', 'Payment Mode', 'Apply HST'
   ];
   const headerRow = ws.addRow(headers);
   headerRow.font = { bold: true };
@@ -350,7 +353,7 @@ async function writeOrdersToExcel(orders) {
   ws.columns = [
     { width: 10 }, { width: 10 }, { width: 14 }, { width: 22 }, { width: 18 },
     { width: 10 }, { width: 12 }, { width: 14 }, { width: 14 },
-    { width: 16 }, { width: 18 }, { width: 14 }, { width: 18 }, { width: 14 }
+    { width: 16 }, { width: 18 }, { width: 14 }, { width: 18 }, { width: 14 }, { width: 12 }, { width: 10 }
   ];
 
   const monthGroups = {};
@@ -382,10 +385,10 @@ async function writeOrdersToExcel(orders) {
           ws.addRow([null, order.orderId, fmt(order.orderDate), order.customerName,
             item.itemName, item.quantity, item.unitPrice, order.orderStatus,
             order.paymentStatus, itemTotal, order.totalAmount,
-            fmt(order.deliveryDate), order.deliveryLocation, order.referredBy]);
+            fmt(order.deliveryDate), order.deliveryLocation, order.referredBy, order.paymentMode || '', order.applyHst || 'No']);
         } else {
           ws.addRow([null, order.orderId, null, null, item.itemName, item.quantity,
-            item.unitPrice, null, null, itemTotal, null, null, null, null]);
+            item.unitPrice, null, null, itemTotal, null, null, null, null, null, null]);
         }
       });
     });
@@ -455,6 +458,7 @@ app.post('/api/orders', async (req, res) => {
       unitPrice: Number(item.unitPrice) || 0,
       itemTotal: Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * 100) / 100
     }));
+    newOrder.applyHst = String(newOrder.applyHst || 'No').trim() === 'Yes' ? 'Yes' : 'No';
     newOrder.totalAmount = Math.round(newOrder.items.reduce((s, i) => s + i.itemTotal, 0) * 100) / 100;
     orders.push(newOrder);
     await writeOrders(orders);
@@ -482,6 +486,7 @@ app.put('/api/orders/:id', async (req, res) => {
       unitPrice: Number(item.unitPrice) || 0,
       itemTotal: Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * 100) / 100
     }));
+    updated.applyHst = String(updated.applyHst || 'No').trim() === 'Yes' ? 'Yes' : 'No';
     updated.totalAmount = Math.round(updated.items.reduce((s, i) => s + i.itemTotal, 0) * 100) / 100;
     orders[idx] = updated;
     await writeOrders(orders);

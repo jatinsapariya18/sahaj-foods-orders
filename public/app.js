@@ -507,6 +507,7 @@ function openDetailModal(orderId) {
       <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Delivery Location</span><div style="font-weight:500;font-size:.95rem;margin-top:2px"><i class="bi bi-geo-alt" style="color:var(--saffron);margin-right:4px"></i>${escapeHtml(o.deliveryLocation || '-')}</div></div>
       <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Delivery Status</span><div style="margin-top:4px">${statusBadge}</div></div>
       <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Payment Status</span><div style="margin-top:4px">${payBadge}</div></div>
+      <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Apply HST</span><div style="font-weight:500;font-size:.95rem;margin-top:2px"><i class="bi bi-percent" style="color:var(--saffron);margin-right:4px"></i>${escapeHtml(o.applyHst || 'No')}</div></div>
       <div><span style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Payment Mode</span><div style="font-weight:500;font-size:.95rem;margin-top:2px"><i class="bi bi-wallet2" style="color:var(--saffron);margin-right:4px"></i>${escapeHtml(o.paymentMode || '-')}</div></div>
     </div>
     <div style="border-top:1px solid var(--gray-200);padding-top:16px">
@@ -519,10 +520,19 @@ function openDetailModal(orderId) {
           <th style="padding:8px 12px;font-size:.72rem;font-weight:600;text-transform:uppercase;color:var(--gray-500);text-align:right">Subtotal</th>
         </tr></thead>
         <tbody>${itemsTable}</tbody>
-        <tfoot><tr style="border-top:2px solid var(--gray-200)">
+        <tfoot>${o.applyHst === 'Yes' ? `<tr style="border-top:2px solid var(--gray-200)">
+          <td colspan="3" style="padding:8px 12px;font-weight:600;text-align:right;color:var(--gray-500)">Subtotal</td>
+          <td style="padding:8px 12px;font-weight:600;text-align:right">$${o.totalAmount.toFixed(2)}</td>
+        </tr><tr>
+          <td colspan="3" style="padding:8px 12px;font-weight:600;text-align:right;color:var(--gray-500)">HST (13%)</td>
+          <td style="padding:8px 12px;font-weight:600;text-align:right">$${(Math.round(o.totalAmount * 0.13 * 100) / 100).toFixed(2)}</td>
+        </tr><tr>
+          <td colspan="3" style="padding:8px 12px;font-weight:700;text-align:right">Total</td>
+          <td style="padding:8px 12px;font-weight:700;text-align:right;color:var(--saffron);font-size:1rem">$${(Math.round((o.totalAmount + o.totalAmount * 0.13) * 100) / 100).toFixed(2)}</td>
+        </tr>` : `<tr style="border-top:2px solid var(--gray-200)">
           <td colspan="3" style="padding:10px 12px;font-weight:700;text-align:right">Total</td>
           <td style="padding:10px 12px;font-weight:700;text-align:right;color:var(--saffron);font-size:1rem">$${o.totalAmount.toFixed(2)}</td>
-        </tr></tfoot>
+        </tr>`}</tfoot>
       </table>
     </div>
   `;
@@ -566,7 +576,9 @@ function drawReceipt(order, logoImg) {
   const infoH = 110;
   const tableHeaderH = 36;
   const tableRowH = 32;
-  const tableH = tableHeaderH + itemCount * tableRowH + 50;
+  const hstApplied = order.applyHst === 'Yes';
+  const hstExtraH = hstApplied ? 60 : 0;
+  const tableH = tableHeaderH + itemCount * tableRowH + 50 + hstExtraH;
   const footerH = 120;
   const H = pad + headerH + infoH + tableH + footerH + pad;
 
@@ -720,10 +732,39 @@ function drawReceipt(order, logoImg) {
   ctx.textAlign = 'right';
   ctx.fillStyle = '#1F2937';
   ctx.font = 'bold 15px Poppins, Arial, sans-serif';
-  ctx.fillText('TOTAL', colPrice + 40, y);
-  ctx.fillStyle = '#C41820';
-  ctx.font = 'bold 20px Poppins, Arial, sans-serif';
-  ctx.fillText('$' + order.totalAmount.toFixed(2), colSubtotal, y);
+
+  if (hstApplied) {
+    // Subtotal
+    ctx.fillText('SUBTOTAL', colPrice + 40, y);
+    ctx.fillStyle = '#374151';
+    ctx.font = '500 16px Poppins, Arial, sans-serif';
+    ctx.fillText('$' + order.totalAmount.toFixed(2), colSubtotal, y);
+    y += 24;
+
+    // HST line
+    const hstAmount = Math.round(order.totalAmount * 0.13 * 100) / 100;
+    ctx.fillStyle = '#1F2937';
+    ctx.font = 'bold 15px Poppins, Arial, sans-serif';
+    ctx.fillText('HST (13%)', colPrice + 40, y);
+    ctx.fillStyle = '#374151';
+    ctx.font = '500 16px Poppins, Arial, sans-serif';
+    ctx.fillText('$' + hstAmount.toFixed(2), colSubtotal, y);
+    y += 24;
+
+    // Grand Total
+    const grandTotal = Math.round((order.totalAmount + hstAmount) * 100) / 100;
+    ctx.fillStyle = '#1F2937';
+    ctx.font = 'bold 15px Poppins, Arial, sans-serif';
+    ctx.fillText('TOTAL', colPrice + 40, y);
+    ctx.fillStyle = '#C41820';
+    ctx.font = 'bold 20px Poppins, Arial, sans-serif';
+    ctx.fillText('$' + grandTotal.toFixed(2), colSubtotal, y);
+  } else {
+    ctx.fillText('TOTAL', colPrice + 40, y);
+    ctx.fillStyle = '#C41820';
+    ctx.font = 'bold 20px Poppins, Arial, sans-serif';
+    ctx.fillText('$' + order.totalAmount.toFixed(2), colSubtotal, y);
+  }
   y += 36;
 
   // ── Footer ──
@@ -764,6 +805,7 @@ function openNewOrderModal() {
     'July','August','September','October','November','December'];
   document.getElementById('fStatus').value = 'Pending';
   document.getElementById('fPayment').value = 'No';
+  document.getElementById('fApplyHst').value = 'No';
   document.getElementById('fPaymentMode').value = '';
 
   document.getElementById('itemsContainer').innerHTML = '';
@@ -793,6 +835,7 @@ function openEditModal(orderId) {
   document.getElementById('fCustomer').value = order.customerName || '';
   document.getElementById('fStatus').value = order.orderStatus || 'Pending';
   document.getElementById('fPayment').value = order.paymentStatus || 'No';
+  document.getElementById('fApplyHst').value = order.applyHst || 'No';
   document.getElementById('fPaymentMode').value = order.paymentMode || '';
   // Convert DD/MM/YYYY to YYYY-MM-DD for date input
   const rawDeliveryDate = order.deliveryDate || '';
@@ -948,6 +991,7 @@ async function saveOrder() {
     customerName: document.getElementById('fCustomer').value.trim(),
     orderStatus: document.getElementById('fStatus').value,
     paymentStatus: document.getElementById('fPayment').value,
+    applyHst: document.getElementById('fApplyHst').value,
     paymentMode: document.getElementById('fPaymentMode').value,
     deliveryDate: (() => { const v = document.getElementById('fDeliveryDate').value; return v ? v.split('-').reverse().join('/') : ''; })(),
     deliveryLocation: document.getElementById('fDeliveryLoc').value.trim(),

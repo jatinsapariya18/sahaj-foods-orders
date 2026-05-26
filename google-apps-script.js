@@ -20,7 +20,7 @@ const HEADERS = [
   'Month', 'Order Id', 'Order Date', 'Customer Name', 'Item Name',
   'Quantity', 'Unit Price', 'Order Status', 'Payment Status',
   'Item total Amount', 'Total Order Amount', 'Delivery Date', 'Delivery Location',
-  'Referred By', 'Payment Mode'
+  'Referred By', 'Payment Mode', 'Apply HST'
 ];
 
 function ensureHeaders(sheet) {
@@ -34,7 +34,7 @@ function ensureHeaders(sheet) {
   const existing = sheet.getRange(1, 1, 1, Math.max(lastCol, HEADERS.length)).getValues()[0];
   let changed = false;
   for (let i = 0; i < HEADERS.length; i++) {
-    if (!existing[i] || String(existing[i]).trim() === '') {
+    if (String(existing[i] || '').trim() !== HEADERS[i]) {
       existing[i] = HEADERS[i];
       changed = true;
     }

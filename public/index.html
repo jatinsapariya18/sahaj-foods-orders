@@ -45,7 +45,7 @@
     .top-bar {
       background: #fff;
       border-bottom: 1px solid var(--gray-200);
-      padding: 6px 0;
+      padding: 2px 0;
       position: sticky;
       top: 0;
       z-index: 100;
@@ -64,7 +64,7 @@
       text-decoration: none;
     }
     .brand img {
-      height: 225px;
+      height: 200px;
       width: auto;
       object-fit: contain;
       border-radius: 8px;
@@ -877,7 +877,7 @@
         text-align: center;
       }
       .brand { gap: 8px; }
-      .brand img { height: 120px; }
+      .brand img { height: 100px; }
       .brand-text h1 { font-size: 1.2rem; }
       .nav-right { justify-content: center; }
 
@@ -1004,7 +1004,7 @@
 
     @media (max-width: 400px) {
       .container { padding-left: 10px; padding-right: 10px; }
-      .brand img { height: 60px; }
+      .brand img { height: 50px; }
       .brand-text h1 { font-size: 1rem; }
       .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
       .stat-card { padding: 10px; gap: 8px; }
@@ -1275,12 +1275,15 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body" id="detailBody" style="padding:24px"></div>
-      <div class="modal-footer" style="border-top:1px solid var(--gray-200);padding:12px 24px;gap:8px">
-        <button type="button" class="btn-cancel" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="action-btn edit" id="detailEditBtn" style="width:auto;height:auto;padding:8px 18px;font-size:.85rem;border-radius:10px;gap:6px;font-weight:600;font-family:'Poppins',sans-serif">
+      <div class="modal-footer" style="border-top:1px solid var(--gray-200);padding:12px 24px;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn-cancel" data-bs-dismiss="modal" style="padding:8px 18px;font-size:.85rem;border-radius:10px;font-weight:600;font-family:'Poppins',sans-serif">Close</button>
+        <button type="button" class="action-btn" id="detailReceiptBtn" style="width:auto;height:auto;padding:8px 18px;font-size:.85rem;border-radius:10px;gap:6px;font-weight:600;font-family:'Poppins',sans-serif;background:var(--green);color:#fff;border:none;cursor:pointer;display:inline-flex;align-items:center;min-width:0">
+          <i class="bi bi-download"></i> Receipt
+        </button>
+        <button type="button" class="action-btn edit" id="detailEditBtn" style="width:auto;height:auto;padding:8px 18px;font-size:.85rem;border-radius:10px;gap:6px;font-weight:600;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;min-width:0">
           <i class="bi bi-pencil-fill"></i> Edit
         </button>
-        <button type="button" class="action-btn delete" id="detailDeleteBtn" style="width:auto;height:auto;padding:8px 18px;font-size:.85rem;border-radius:10px;gap:6px;font-weight:600;font-family:'Poppins',sans-serif">
+        <button type="button" class="action-btn delete" id="detailDeleteBtn" style="width:auto;height:auto;padding:8px 18px;font-size:.85rem;border-radius:10px;gap:6px;font-weight:600;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;min-width:0">
           <i class="bi bi-trash3-fill"></i> Delete
         </button>
       </div>

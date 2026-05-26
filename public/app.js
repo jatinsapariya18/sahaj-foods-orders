@@ -535,8 +535,218 @@ function openDetailModal(orderId) {
     bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
     openDeleteModal(orderId);
   };
+  document.getElementById('detailReceiptBtn').onclick = () => {
+    generateReceipt(o);
+  };
 
   new bootstrap.Modal(document.getElementById('detailModal')).show();
+}
+
+// ── Receipt Generation ───────────────────────────────────────────────────────
+function generateReceipt(order) {
+  const logo = new Image();
+  logo.crossOrigin = 'anonymous';
+  logo.onload = () => drawReceipt(order, logo);
+  logo.onerror = () => drawReceipt(order, null);
+  logo.src = 'logo.png';
+}
+
+function drawReceipt(order, logoImg) {
+  // Use 3x scale for ultra-crisp HD output
+  const scale = 3;
+  const canvas = document.createElement('canvas');
+  const W = 600;
+  const pad = 40;
+  const contentW = W - pad * 2;
+  const lineH = 26;
+
+  // Pre-calculate height
+  const itemCount = order.items.length;
+  const headerH = logoImg ? 210 : 70;
+  const infoH = 110;
+  const tableHeaderH = 36;
+  const tableRowH = 32;
+  const tableH = tableHeaderH + itemCount * tableRowH + 50;
+  const footerH = 120;
+  const H = pad + headerH + infoH + tableH + footerH + pad;
+
+  canvas.width = W * scale;
+  canvas.height = H * scale;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  // Background — subtle warm off-white
+  ctx.fillStyle = '#FFFDF9';
+  ctx.fillRect(0, 0, W, H);
+
+  let y = pad;
+
+  // ── Logo (top-left, large) & Date (top-right) ──
+  const logoTopY = y;
+  if (logoImg) {
+    const logoH = 180;
+    const logoW = logoImg.width * (logoH / logoImg.height);
+    ctx.drawImage(logoImg, pad, y, logoW, logoH);
+  }
+
+  // Current date top-right
+  const genDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const logoH = 180;
+  const rightCenterY = logoTopY + logoH / 2;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#8A8A8A';
+  ctx.font = '500 12px Poppins, Arial, sans-serif';
+  ctx.fillText(genDate, W - pad, rightCenterY - 24);
+
+  // Company name & tagline vertically centered with logo
+  ctx.fillStyle = '#C41820';
+  ctx.font = 'bold 26px Poppins, Arial, sans-serif';
+  ctx.fillText('SAHAJ FOODS', W - pad, rightCenterY + 4);
+  ctx.fillStyle = '#D4883A';
+  ctx.font = 'italic 13px Poppins, Arial, sans-serif';
+  ctx.fillText('Ghar Jaisa Swad', W - pad, rightCenterY + 22);
+  ctx.fillStyle = '#6B7280';
+  ctx.font = '600 10px Poppins, Arial, sans-serif';
+  ctx.fillText('INVOICE', W - pad, rightCenterY + 40);
+
+  y = logoTopY + (logoImg ? 195 : 80);
+
+  // Accent line divider
+  const grad = ctx.createLinearGradient(pad, y, W - pad, y);
+  grad.addColorStop(0, '#C41820');
+  grad.addColorStop(0.5, '#D4883A');
+  grad.addColorStop(1, '#C41820');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad, y);
+  ctx.lineTo(W - pad, y);
+  ctx.stroke();
+  y += 18;
+
+  // ── Order Info ──
+  ctx.textAlign = 'left';
+
+  const infoFields = [
+    ['Invoice #', String(order.orderId)],
+    ['Customer Name', order.customerName],
+    ['Order Date', (order.orderDate || '-').replace(/[T ].*/, '')],
+    ['Address', order.deliveryLocation || '-'],
+  ];
+
+  infoFields.forEach(([label, value]) => {
+    ctx.fillStyle = '#8A8A8A';
+    ctx.font = '600 10px Poppins, Arial, sans-serif';
+    ctx.fillText(label.toUpperCase(), pad, y);
+    ctx.fillStyle = '#1F2937';
+    ctx.font = '500 13px Poppins, Arial, sans-serif';
+    ctx.fillText(value, pad + 150, y);
+    y += lineH;
+  });
+
+  y += 12;
+
+  // Subtle divider
+  ctx.strokeStyle = '#E5E7EB';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad, y);
+  ctx.lineTo(W - pad, y);
+  ctx.stroke();
+  y += 16;
+
+  // ── Items Table Header ──
+  ctx.fillStyle = '#FEF3E2';
+  ctx.fillRect(pad, y, contentW, tableHeaderH);
+
+  ctx.fillStyle = '#92400E';
+  ctx.font = 'bold 11px Poppins, Arial, sans-serif';
+  const colNo = pad + 10;
+  const colItem = pad + 40;
+  const colQty = pad + 270;
+  const colPrice = pad + 350;
+  const colSubtotal = W - pad - 10;
+
+  ctx.textAlign = 'left';
+  ctx.fillText('NO.', colNo, y + 23);
+  ctx.fillText('ITEM', colItem, y + 23);
+  ctx.textAlign = 'center';
+  ctx.fillText('QTY', colQty, y + 23);
+  ctx.textAlign = 'right';
+  ctx.fillText('PRICE', colPrice + 40, y + 23);
+  ctx.fillText('SUBTOTAL', colSubtotal, y + 23);
+  y += tableHeaderH;
+
+  // ── Items Rows ──
+  order.items.forEach((item, i) => {
+    if (i % 2 === 1) {
+      ctx.fillStyle = '#FFFBF5';
+      ctx.fillRect(pad, y, contentW, tableRowH);
+    }
+    ctx.fillStyle = '#8A8A8A';
+    ctx.font = '500 12px Poppins, Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(String(i + 1), colNo, y + 21);
+    ctx.fillStyle = '#1F2937';
+    ctx.font = '500 13px Poppins, Arial, sans-serif';
+    ctx.fillText(item.itemName, colItem, y + 21);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#374151';
+    ctx.fillText(String(item.quantity), colQty, y + 21);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#374151';
+    ctx.fillText('$' + item.unitPrice.toFixed(2), colPrice + 40, y + 21);
+    ctx.fillStyle = '#1F2937';
+    ctx.font = 'bold 13px Poppins, Arial, sans-serif';
+    ctx.fillText('$' + item.itemTotal.toFixed(2), colSubtotal, y + 21);
+    y += tableRowH;
+  });
+
+  // ── Total Row ──
+  y += 8;
+  const totalGrad = ctx.createLinearGradient(pad, y, W - pad, y);
+  totalGrad.addColorStop(0, '#C41820');
+  totalGrad.addColorStop(1, '#D4883A');
+  ctx.strokeStyle = totalGrad;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pad, y);
+  ctx.lineTo(W - pad, y);
+  ctx.stroke();
+  y += 24;
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#1F2937';
+  ctx.font = 'bold 15px Poppins, Arial, sans-serif';
+  ctx.fillText('TOTAL', colPrice + 40, y);
+  ctx.fillStyle = '#C41820';
+  ctx.font = 'bold 20px Poppins, Arial, sans-serif';
+  ctx.fillText('$' + order.totalAmount.toFixed(2), colSubtotal, y);
+  y += 36;
+
+  // ── Footer ──
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#D4883A';
+  ctx.font = 'italic 600 13px Poppins, Arial, sans-serif';
+  ctx.fillText('Thank you for your order!', W / 2, y);
+  y += 22;
+  ctx.font = '500 12px Poppins, Arial, sans-serif';
+  ctx.fillStyle = '#374151';
+  ctx.fillText('\u{1F4DE} 437-450-1008  |  \u{2709}\uFE0F sahajfoods108@gmail.com', W / 2, y);
+
+  // ── Download (mobile-compatible) ──
+  const dataUrl = canvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  link.download = 'Invoice-' + order.orderId + '.png';
+  link.href = dataUrl;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => document.body.removeChild(link), 100);
+
+  showToast('Receipt downloaded!', 'success');
 }
 
 // ── New Order Modal ──────────────────────────────────────────────────────────

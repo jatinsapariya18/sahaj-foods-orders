@@ -5,6 +5,7 @@ let deleteTargetId = null;
 let currentPage = 1;
 const PAGE_SIZE = 10;
 let sortByOrderDate = null; // null = no sort, 'asc' or 'desc'
+let selectedOrderIds = new Set();
 
 const ITEM_PRICES = {
   'Sooji Puri': 3.99,
@@ -73,7 +74,9 @@ async function loadOrders() {
   try {
     const res = await fetch('/api/orders');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    allOrders = await res.json();
+    const data = await res.json();
+    allOrders = Array.isArray(data) ? data : [];
+    selectedOrderIds = new Set([...selectedOrderIds].filter(id => allOrders.some(order => order.orderId === id)));
     updateStats();
     filterOrders();
     // show alert for today's deliveries (if any)
@@ -96,9 +99,12 @@ function updateSortIcon() {
 async function loadItems() {
   try {
     const res = await fetch('/api/items');
-    itemCatalog = await res.json();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    itemCatalog = Array.isArray(data) ? data : [];
   } catch (err) {
     console.error('Failed to load items:', err);
+    itemCatalog = [];
   }
 }
 
@@ -208,15 +214,18 @@ function dismissDeliveryAlert() {
 
 // ── Stats ────────────────────────────────────────────────────────────────────
 function updateStats() {
-  document.getElementById('statTotal').textContent = allOrders.length;
-  document.getElementById('statToday').textContent = getTodayOrders().length;
-  document.getElementById('statCreatedToday').textContent = getCreatedTodayOrders().length;
-  document.getElementById('statPending').textContent =
-    allOrders.filter(o => o.orderStatus === 'Pending').length;
-  document.getElementById('statUnpaid').textContent =
-    allOrders.filter(o => o.paymentStatus === 'No').length;
+  const setStat = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+  };
+
+  setStat('statTotal', allOrders.length);
+  setStat('statToday', getTodayOrders().length);
+  setStat('statCreatedToday', getCreatedTodayOrders().length);
+  setStat('statPending', allOrders.filter(o => o.orderStatus === 'Pending').length);
+  setStat('statUnpaid', allOrders.filter(o => o.paymentStatus === 'No').length);
   const revenue = allOrders.reduce((s, o) => s + o.totalAmount, 0);
-  document.getElementById('statRevenue').textContent = '$' + revenue.toFixed(2);
+  setStat('statRevenue', '$' + revenue.toFixed(2));
 }
 
 // ── Card Filters ─────────────────────────────────────────────────────────────
@@ -378,6 +387,7 @@ function renderOrders(orders) {
     tbody.innerHTML = '';
     noOrders.style.display = 'block';
     renderPagination(0, 0);
+    updateBulkReceiptControls([]);
     return;
   }
   noOrders.style.display = 'none';
@@ -409,8 +419,12 @@ function renderOrders(orders) {
     let deliveryLocHtml = o.deliveryLocation ? `<i class="bi bi-geo-alt"></i>${escapeHtml(o.deliveryLocation)}` : '';
 
     const orderDateDisplay = o.orderDate ? o.orderDate.replace(/[T ].*/,'') : '';
+    const isSelected = selectedOrderIds.has(o.orderId);
 
     return `<tr onclick="openDetailModal(${o.orderId})">
+      <td data-label="Select" style="text-align:center" onclick="event.stopPropagation()">
+        <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleOrderSelection(${o.orderId}, this.checked)" style="width:16px;height:16px;accent-color:var(--saffron)">
+      </td>
       <td data-label="Order Date" style="white-space:nowrap;font-size:.82rem"><i class="bi bi-calendar3" style="color:var(--saffron);margin-right:4px"></i>${orderDateDisplay}</td>
       <td data-label="Customer">
         <div class="customer-cell">
@@ -426,6 +440,7 @@ function renderOrders(orders) {
   }).join('');
 
   renderPagination(orders.length, totalPages);
+  updateBulkReceiptControls(pageOrders);
 }
 
 function renderPagination(totalItems, totalPages) {
@@ -474,6 +489,337 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function getVisibleOrders() {
+  return window._filteredOrders || allOrders;
+}
+
+function getVisiblePageOrders() {
+  const visibleOrders = getVisibleOrders();
+  const start = (currentPage - 1) * PAGE_SIZE;
+  return visibleOrders.slice(start, start + PAGE_SIZE);
+}
+
+function updateBulkReceiptControls(pageOrders = getVisiblePageOrders()) {
+  const selectedCount = selectedOrderIds.size;
+  const bulkBtn = document.getElementById('bulkReceiptBtn');
+  const bulkCount = document.getElementById('bulkReceiptCount');
+  const bulkCountInline = document.getElementById('bulkReceiptCountInline');
+  if (bulkBtn) bulkBtn.disabled = selectedCount === 0;
+  if (bulkCount) bulkCount.textContent = `${selectedCount} selected`;
+  if (bulkCountInline) bulkCountInline.textContent = `(${selectedCount} selected)`;
+
+  const selectAll = document.getElementById('selectAllOrders');
+  if (selectAll) {
+    const selectedVisibleCount = pageOrders.filter(order => selectedOrderIds.has(order.orderId)).length;
+    selectAll.checked = pageOrders.length > 0 && selectedVisibleCount === pageOrders.length;
+    selectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < pageOrders.length;
+  }
+}
+
+function toggleOrderSelection(orderId, isChecked) {
+  if (isChecked) {
+    selectedOrderIds.add(orderId);
+  } else {
+    selectedOrderIds.delete(orderId);
+  }
+  const bulkBtn = document.getElementById('bulkReceiptBtn');
+  if (bulkBtn) bulkBtn.disabled = selectedOrderIds.size === 0;
+  renderOrders(getVisibleOrders());
+}
+
+function toggleVisibleOrders(isChecked) {
+  const visiblePageOrders = getVisiblePageOrders();
+  visiblePageOrders.forEach(order => {
+    if (isChecked) selectedOrderIds.add(order.orderId);
+    else selectedOrderIds.delete(order.orderId);
+  });
+  renderOrders(getVisibleOrders());
+}
+
+function formatReceiptDate(value) {
+  const iso = parseAnyDateToISO(value || '');
+  if (!iso) return '-';
+  const [year, month, day] = iso.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function wrapReceiptText(ctx, text, maxWidth) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [''];
+
+  const lines = [];
+  let line = words[0];
+
+  for (let i = 1; i < words.length; i += 1) {
+    const testLine = `${line} ${words[i]}`;
+    if (ctx.measureText(testLine).width > maxWidth) {
+      lines.push(line);
+      line = words[i];
+    } else {
+      line = testLine;
+    }
+  }
+
+  if (line) lines.push(line);
+  return lines;
+}
+
+function generateSelectedBulkReceipt() {
+  const selectedOrders = allOrders
+    .filter(order => selectedOrderIds.has(order.orderId))
+    .sort((a, b) => {
+      const dateA = parseAnyDateToISO(a.deliveryDate || '') || '9999-12-31';
+      const dateB = parseAnyDateToISO(b.deliveryDate || '') || '9999-12-31';
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return a.orderId - b.orderId;
+    });
+
+  if (selectedOrders.length === 0) {
+    showToast('Select at least one order first', 'neutral');
+    return;
+  }
+
+  const firstCustomerName = selectedOrders[0] ? selectedOrders[0].customerName || 'Bulk' : 'Bulk';
+
+  const logo = new Image();
+  logo.crossOrigin = 'anonymous';
+  logo.onload = () => drawBulkReceipt(selectedOrders, logo);
+  logo.onerror = () => drawBulkReceipt(selectedOrders, null);
+  logo.src = 'logo.png';
+
+  function sanitizeFileName(value) {
+    return String(value || 'Bulk')
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'Bulk';
+  }
+
+  drawBulkReceipt._fileName = `Bulk-Receipt-${sanitizeFileName(firstCustomerName)}-${selectedOrders.length}-Orders.png`;
+}
+
+function drawBulkReceipt(orders, logoImg) {
+  const scale = 3;
+  const canvas = document.createElement('canvas');
+  const isMobile = window.innerWidth <= 768;
+  const W = isMobile ? 680 : 900;
+  const pad = isMobile ? 28 : 48;
+  const contentW = W - pad * 2;
+  const bgColor = '#FFFDF9';
+  const accentRed = '#C41820';
+  const accentSaffron = '#D4883A';
+  const labelColor = '#8A8A8A';
+  const titleColor = '#1F2937';
+  const bodyColor = '#374151';
+  const tableHeaderBg = '#FEF3E2';
+  const tableHeaderText = '#92400E';
+  const altRowBg = '#FFFBF5';
+  const dividerColor = '#E5E7EB';
+
+  const rows = orders.map(order => {
+    const subtotal = Number(order.totalAmount || 0);
+    const hstApplied = order.applyHst === 'Yes';
+    const hstAmount = hstApplied ? Math.round(subtotal * 0.13 * 100) / 100 : 0;
+    const amount = Math.round((subtotal + hstAmount) * 100) / 100;
+    const itemSummary = (order.items || []).map(item => `${item.quantity}x ${item.itemName}`).join(', ');
+    return {
+      deliveryDate: formatReceiptDate(order.deliveryDate),
+      itemSummary: itemSummary || '-',
+      amount,
+      hstApplied,
+      hstAmount
+    };
+  });
+
+  const totalAmount = rows.reduce((sum, row) => sum + row.amount, 0);
+  const uniqueCustomers = [...new Set(orders.map(order => String(order.customerName || '').trim()).filter(Boolean))];
+  const uniqueAddresses = [...new Set(orders.map(order => String(order.deliveryLocation || '').trim()).filter(Boolean))];
+  const customerLine = uniqueCustomers.length > 0 ? uniqueCustomers.join(', ') : '-';
+  const addressLine = uniqueAddresses.length > 0 ? uniqueAddresses.join(', ') : '-';
+
+  const titleBlockH = isMobile ? 185 : 210;
+  const customerInfoH = isMobile ? 56 : 64;
+  const tableHeaderH = isMobile ? 32 : 36;
+  const rowH = isMobile ? 28 : 32;
+  const footerH = 112;
+  const H = pad + titleBlockH + 24 + customerInfoH + 12 + tableHeaderH + (rows.length * rowH) + 18 + footerH + pad;
+
+  canvas.width = W * scale;
+  canvas.height = H * scale;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  const truncateText = (text, maxWidth) => {
+    const raw = String(text || '');
+    if (ctx.measureText(raw).width <= maxWidth) return raw;
+    const suffix = '...';
+    let low = 0;
+    let high = raw.length;
+    while (low < high) {
+      const mid = Math.floor((low + high + 1) / 2);
+      const candidate = raw.slice(0, mid) + suffix;
+      if (ctx.measureText(candidate).width <= maxWidth) low = mid;
+      else high = mid - 1;
+    }
+    return raw.slice(0, low) + suffix;
+  };
+
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, W, H);
+
+  let y = pad;
+  const logoTopY = y;
+  if (logoImg) {
+    const logoH = isMobile ? 140 : 170;
+    const logoW = logoImg.width * (logoH / logoImg.height);
+    ctx.drawImage(logoImg, pad, y, logoW, logoH);
+  }
+
+  const rightCenterY = logoTopY + (isMobile ? 70 : 85);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = labelColor;
+  ctx.font = isMobile ? '500 11px Poppins, Arial, sans-serif' : '500 12px Poppins, Arial, sans-serif';
+  ctx.fillText(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), W - pad, rightCenterY - 28);
+  ctx.fillStyle = accentRed;
+  ctx.font = isMobile ? 'bold 22px Poppins, Arial, sans-serif' : 'bold 26px Poppins, Arial, sans-serif';
+  ctx.fillText('SAHAJ FOODS', W - pad, rightCenterY + 4);
+  ctx.fillStyle = accentSaffron;
+  ctx.font = isMobile ? 'italic 12px Poppins, Arial, sans-serif' : 'italic 13px Poppins, Arial, sans-serif';
+  ctx.fillText('Ghar Jaisa Swad', W - pad, rightCenterY + 22);
+  ctx.fillStyle = '#6B7280';
+  ctx.font = isMobile ? '600 9px Poppins, Arial, sans-serif' : '600 10px Poppins, Arial, sans-serif';
+  ctx.fillText('INVOICE', W - pad, rightCenterY + 40);
+
+  y = logoTopY + (logoImg ? (isMobile ? 155 : 185) : (isMobile ? 76 : 90));
+  const titleGrad = ctx.createLinearGradient(pad, y, W - pad, y);
+  titleGrad.addColorStop(0, accentRed);
+  titleGrad.addColorStop(0.5, accentSaffron);
+  titleGrad.addColorStop(1, accentRed);
+  ctx.strokeStyle = titleGrad;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad, y);
+  ctx.lineTo(W - pad, y);
+  ctx.stroke();
+  y += 18;
+
+  ctx.fillStyle = tableHeaderBg;
+  ctx.strokeStyle = dividerColor;
+  ctx.lineWidth = 1;
+  ctx.fillRect(pad, y, contentW, customerInfoH);
+  ctx.strokeRect(pad, y, contentW, customerInfoH);
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = labelColor;
+  ctx.font = isMobile ? '600 9px Poppins, Arial, sans-serif' : '600 10px Poppins, Arial, sans-serif';
+  ctx.fillText('CUSTOMER NAME', pad + 12, y + (isMobile ? 16 : 18));
+  ctx.fillText('ADDRESS', pad + 12, y + (isMobile ? 36 : 42));
+  ctx.fillStyle = titleColor;
+  ctx.font = isMobile ? '600 10px Poppins, Arial, sans-serif' : '600 11px Poppins, Arial, sans-serif';
+  const customerMaxW = contentW - 130;
+  const addressMaxW = contentW - 90;
+  const customerText = truncateText(customerLine, customerMaxW);
+  const addressText = truncateText(addressLine, addressMaxW);
+  ctx.fillText(customerText, pad + 120, y + (isMobile ? 16 : 18));
+  ctx.fillText(addressText, pad + 85, y + (isMobile ? 36 : 42));
+  y += customerInfoH + 12;
+
+  ctx.fillStyle = tableHeaderBg;
+  ctx.fillRect(pad, y, contentW, tableHeaderH);
+  ctx.strokeStyle = dividerColor;
+  ctx.strokeRect(pad, y, contentW, tableHeaderH);
+  ctx.fillStyle = tableHeaderText;
+  ctx.font = isMobile ? 'bold 10px Poppins, Arial, sans-serif' : 'bold 11px Poppins, Arial, sans-serif';
+
+  const colSr = pad + 12;
+  const colDate = pad + (isMobile ? 56 : 70);
+  const colItem = pad + (isMobile ? 150 : 220);
+  const colAmount = W - pad - 12;
+  const maxItemWidth = colAmount - colItem - 16;
+
+  ctx.textAlign = 'left';
+  ctx.fillText('Sr.No', colSr, y + (isMobile ? 20 : 23));
+  ctx.fillText('Delivery Date', colDate, y + (isMobile ? 20 : 23));
+  ctx.fillText('Item', colItem, y + (isMobile ? 20 : 23));
+  ctx.textAlign = 'right';
+  ctx.fillText('Amount', colAmount, y + (isMobile ? 20 : 23));
+  y += tableHeaderH;
+
+  rows.forEach((row, index) => {
+    if (index % 2 === 1) {
+      ctx.fillStyle = altRowBg;
+      ctx.fillRect(pad, y, contentW, rowH);
+    }
+    ctx.strokeStyle = dividerColor;
+    ctx.beginPath();
+    ctx.moveTo(pad, y + rowH);
+    ctx.lineTo(W - pad, y + rowH);
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = titleColor;
+    ctx.font = isMobile ? '500 10px Poppins, Arial, sans-serif' : '500 11px Poppins, Arial, sans-serif';
+    ctx.fillText(String(index + 1), colSr, y + (isMobile ? 18 : 21));
+    ctx.fillText(row.deliveryDate || '-', colDate, y + (isMobile ? 18 : 21));
+    ctx.fillText(truncateText(row.itemSummary, maxItemWidth), colItem, y + (isMobile ? 18 : 21));
+    ctx.textAlign = 'right';
+    ctx.fillStyle = accentRed;
+    ctx.font = isMobile ? 'bold 10px Poppins, Arial, sans-serif' : 'bold 11px Poppins, Arial, sans-serif';
+    const amountText = row.hstApplied
+      ? `$${row.amount.toFixed(2)} (HST $${row.hstAmount.toFixed(2)})`
+      : `$${row.amount.toFixed(2)}`;
+    ctx.fillText(amountText, colAmount, y + (isMobile ? 18 : 21));
+
+    y += rowH;
+  });
+
+  y += 18;
+  const totalGrad = ctx.createLinearGradient(pad, y, W - pad, y);
+  totalGrad.addColorStop(0, accentRed);
+  totalGrad.addColorStop(1, accentSaffron);
+  ctx.strokeStyle = totalGrad;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pad, y);
+  ctx.lineTo(W - pad, y);
+  ctx.stroke();
+  y += 24;
+
+  ctx.fillStyle = titleColor;
+  ctx.font = isMobile ? 'bold 14px Poppins, Arial, sans-serif' : 'bold 16px Poppins, Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('TOTAL AMOUNT', pad, y);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = accentRed;
+  ctx.font = isMobile ? 'bold 18px Poppins, Arial, sans-serif' : 'bold 22px Poppins, Arial, sans-serif';
+  ctx.fillText(`$${totalAmount.toFixed(2)}`, W - pad, y);
+  y += 42;
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = accentSaffron;
+  ctx.font = 'italic 600 13px Poppins, Arial, sans-serif';
+  ctx.fillText('Thank you for your order!', W / 2, y);
+  y += 22;
+  ctx.fillStyle = bodyColor;
+  ctx.font = '500 12px Poppins, Arial, sans-serif';
+  ctx.fillText('437-450-1008  |  sahajfoods108@gmail.com', W / 2, y);
+
+  const dataUrl = canvas.toDataURL('image/png');
+  const uniqueStamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+  const link = document.createElement('a');
+  link.download = drawBulkReceipt._fileName
+    ? drawBulkReceipt._fileName.replace('.png', `-${uniqueStamp}.png`)
+    : `Bulk-Receipt-${orders.length}-Orders-${uniqueStamp}.png`;
+  link.href = dataUrl;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => document.body.removeChild(link), 100);
+
+  showToast('Bulk receipt downloaded!', 'success');
+}
+
 // ── Detail Modal ─────────────────────────────────────────────────────────────
 function openDetailModal(orderId) {
   const o = allOrders.find(x => x.orderId === orderId);
@@ -487,6 +833,10 @@ function openDetailModal(orderId) {
   const payBadge = o.paymentStatus === 'Yes'
     ? '<span class="badge-status badge-paid"><i class="bi bi-circle-fill"></i> Paid</span>'
     : '<span class="badge-status badge-unpaid"><i class="bi bi-circle-fill"></i> Unpaid</span>';
+  const amountLabel = o.applyHst === 'Yes' ? 'Amount with HST' : 'Amount without HST';
+  const amountValue = o.applyHst === 'Yes'
+    ? `$${(Math.round((o.totalAmount + (Math.round(o.totalAmount * 0.13 * 100) / 100)) * 100) / 100).toFixed(2)}`
+    : `$${o.totalAmount.toFixed(2)}`;
 
   const itemsTable = o.items.map(i => `
     <tr>
@@ -535,6 +885,10 @@ function openDetailModal(orderId) {
           <td style="padding:10px 12px;font-weight:700;text-align:right;color:var(--saffron);font-size:1rem">$${o.totalAmount.toFixed(2)}</td>
         </tr>`}</tfoot>
       </table>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:12px 14px;background:var(--gray-50);border-radius:10px;border:1px solid var(--gray-200)">
+      <span style="font-size:.8rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">${amountLabel}</span>
+      <span style="font-size:1.1rem;font-weight:800;color:var(--saffron)">${amountValue}</span>
     </div>
   `;
 
@@ -756,12 +1110,12 @@ function drawReceipt(order, logoImg) {
     const grandTotal = Math.round((order.totalAmount + hstAmount) * 100) / 100;
     ctx.fillStyle = '#1F2937';
     ctx.font = 'bold 15px Poppins, Arial, sans-serif';
-    ctx.fillText('TOTAL', colPrice + 40, y);
+    ctx.fillText('AMOUNT WITH HST', colPrice + 40, y);
     ctx.fillStyle = '#C41820';
     ctx.font = 'bold 20px Poppins, Arial, sans-serif';
     ctx.fillText('$' + grandTotal.toFixed(2), colSubtotal, y);
   } else {
-    ctx.fillText('TOTAL', colPrice + 40, y);
+    ctx.fillText('AMOUNT WITHOUT HST', colPrice + 40, y);
     ctx.fillStyle = '#C41820';
     ctx.font = 'bold 20px Poppins, Arial, sans-serif';
     ctx.fillText('$' + order.totalAmount.toFixed(2), colSubtotal, y);
@@ -953,15 +1307,35 @@ function autoFillPrice(input) {
 }
 
 function updateOrderTotal() {
-  let total = 0;
+  let subtotal = 0;
   document.querySelectorAll('#itemsContainer .item-row').forEach(row => {
     const qty = Number(row.querySelector('.item-qty').value) || 0;
     const price = Number(row.querySelector('.item-price').value) || 0;
     const sub = Math.round(qty * price * 100) / 100;
     row.querySelector('.item-subtotal').textContent = '$' + sub.toFixed(2);
-    total += sub;
+    subtotal += sub;
   });
-  document.getElementById('orderTotal').textContent = total.toFixed(2);
+
+  const applyHst = document.getElementById('fApplyHst')?.value === 'Yes';
+  const hstAmount = applyHst ? Math.round(subtotal * 0.13 * 100) / 100 : 0;
+  const finalTotal = Math.round((subtotal + hstAmount) * 100) / 100;
+
+  const orderTotalLabel = document.getElementById('orderTotalLabel');
+  if (orderTotalLabel) {
+    orderTotalLabel.textContent = applyHst ? 'Amount with HST:' : 'Amount without HST:';
+  }
+
+  const hstInfo = document.getElementById('orderHstInfo');
+  const hstAmountEl = document.getElementById('orderHstAmount');
+  if (applyHst) {
+    if (hstInfo) hstInfo.style.display = 'block';
+    if (hstAmountEl) hstAmountEl.textContent = hstAmount.toFixed(2);
+  } else {
+    if (hstInfo) hstInfo.style.display = 'none';
+    if (hstAmountEl) hstAmountEl.textContent = '0.00';
+  }
+
+  document.getElementById('orderTotal').textContent = finalTotal.toFixed(2);
 }
 
 // ── Save Order ───────────────────────────────────────────────────────────────

@@ -196,6 +196,14 @@
       transform: none;
       box-shadow: none;
     }
+    .bulk-count-inline {
+      display: none;
+      font-size: .78rem;
+      font-weight: 500;
+      opacity: .95;
+      margin-left: 4px;
+      white-space: nowrap;
+    }
     .search-wrap {
       flex: 1;
       min-width: 240px;
@@ -894,8 +902,28 @@
         align-items: stretch;
       }
       .btn-add { width: 100%; justify-content: center; }
+      .bulk-count-inline { display: inline; }
+      #bulkReceiptCount {
+        display: block;
+        width: 100%;
+        text-align: center;
+        white-space: normal;
+      }
+      #bulkReceiptCount { display: none; }
       .search-wrap { min-width: unset; width: 100%; }
       .filter-select { width: 100%; }
+      .orders-card .card-header h5 { font-size: 1rem; }
+      .orders-card .card-header .order-count { font-size: .82rem; }
+      table thead th:first-child,
+      table tbody td:first-child {
+        width: 44px;
+        min-width: 44px;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+      table tbody td:first-child {
+        text-align: center;
+      }
 
       /* Date filter section on mobile */
       .date-filter-row {
@@ -935,7 +963,8 @@
       }
       .date-arrow-sep {
         display: none !important;
-      }\n      .date-filter-actions {
+      }
+      .date-filter-actions {
         display: flex;
         gap: 8px;
       }
@@ -999,12 +1028,32 @@
       }
 
       .item-row { grid-template-columns: 1fr; }
+      .order-total-bar {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+        padding: 10px 12px;
+      }
+      .order-total-bar .label {
+        font-size: .78rem;
+        text-align: right;
+      }
+      .order-total-bar .total {
+        font-size: 1.15rem;
+      }
+      #orderHstInfo {
+        font-size: .78rem !important;
+        margin-top: 6px !important;
+        text-align: right;
+      }
     }
 
     @media (max-width: 400px) {
       .container { padding-left: 10px; padding-right: 10px; }
       .brand img { height: 50px; }
       .brand-text h1 { font-size: 1rem; }
+      #bulkReceiptBtn,
+      #bulkReceiptCount { font-size: .78rem; }
       .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
       .stat-card { padding: 10px; gap: 8px; }
       .stat-icon { width: 36px; height: 36px; font-size: 1rem; }
@@ -1104,6 +1153,10 @@
     <button class="btn-add" onclick="openNewOrderModal()">
       <i class="bi bi-plus-circle-fill"></i> New Order
     </button>
+    <button class="btn-add" id="bulkReceiptBtn" onclick="generateSelectedBulkReceipt()" disabled>
+      <i class="bi bi-receipt"></i> Bulk Receipt <span id="bulkReceiptCountInline" class="bulk-count-inline">(0 selected)</span>
+    </button>
+    <span id="bulkReceiptCount" style="font-size:.82rem;color:var(--gray-500);font-weight:600;white-space:nowrap">0 selected</span>
     <div class="search-wrap">
       <i class="bi bi-search"></i>
       <input type="text" id="searchInput" placeholder="Search orders by customer, item, ID..." oninput="filterOrders()">
@@ -1163,6 +1216,9 @@
       <table>
         <thead>
           <tr>
+            <th style="width:44px;text-align:center;padding-left:10px;padding-right:10px">
+              <input type="checkbox" id="selectAllOrders" onchange="toggleVisibleOrders(this.checked)" style="width:16px;height:16px;accent-color:var(--saffron)">
+            </th>
             <th id="thOrderDate" style="width:70px;cursor:pointer"><i class="bi bi-calendar3"></i> Order Date <span id="orderDateSortIcon" style="font-size:.75rem;color:var(--gray-500)"></span></th>
             <th style="min-width:260px">Customer</th>
             <th>Items</th>
@@ -1221,7 +1277,7 @@
             </div>
             <div class="col-md-3">
               <label class="form-label">Apply HST</label>
-              <select class="form-select" id="fApplyHst">
+              <select class="form-select" id="fApplyHst" onchange="updateOrderTotal()">
                 <option value="No">No</option>
                 <option value="Yes">Yes</option>
               </select>
@@ -1255,8 +1311,11 @@
           </div>
           <div id="itemsContainer"></div>
           <div class="order-total-bar">
-            <span class="label">Order Total:</span>
+            <span class="label" id="orderTotalLabel">Amount without HST:</span>
             <span class="total">$<span id="orderTotal">0.00</span></span>
+          </div>
+          <div id="orderHstInfo" style="display:none;margin-top:8px;font-size:.85rem;color:var(--gray-700);font-weight:600;text-align:right">
+            HST (13%): $<span id="orderHstAmount">0.00</span>
           </div>
         </form>
       </div>
@@ -1317,7 +1376,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
  
